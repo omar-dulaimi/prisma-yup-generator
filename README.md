@@ -11,6 +11,7 @@ Automatically generate [Joi](https://joi.dev/api) schemas from your [Prisma](htt
 
 - [Installation](#installing)
 - [Usage](#usage)
+- [Additional Options](#additional-options)
 
 ## Installation
 
