@@ -108,11 +108,7 @@ export default class Transformer {
   }
 
   getSchemaObjectLine(field: PrismaDMMF.SchemaArg) {
-    let lines: any = field.inputTypes.filter(
-      (inputType) =>
-        !['DateTime'].includes(inputType.type as string) &&
-        !(inputType.type as string).includes('DateTime'),
-    );
+    let lines: any = field.inputTypes;
 
     const inputsLength = field.inputTypes.length;
     if (inputsLength === 0) return lines;
@@ -143,6 +139,13 @@ export default class Transformer {
               inputType.isList
                 ? 'Joi.array().items(Joi.boolean())'
                 : 'Joi.boolean()'
+            }`,
+            field,
+          ];
+        } else if (inputType.type === 'DateTime') {
+          return [
+            `  ${field.name}: ${
+              inputType.isList ? 'Joi.array().items(Joi.date())' : 'Joi.date()'
             }`,
             field,
           ];
