@@ -21,6 +21,11 @@ export async function generate(options: GeneratorOptions) {
 
   Transformer.setOutputPath(outputDir);
 
+  const enumsObj = new Transformer({
+    enumTypes: prismaClientDmmf.schema.enumTypes.prisma,
+  });
+  await enumsObj.printEnumSchemas();
+
   for (
     let i = 0;
     i < prismaClientDmmf.schema.inputObjectTypes.prisma.length;
