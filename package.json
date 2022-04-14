@@ -7,9 +7,8 @@
     "prisma-joi-generator": "lib/generator.js"
   },
   "scripts": {
-    "build": "tsc",
-    "package:build": "./package.sh",
-    "package:publish": "cd package *&& npm publish"
+    "gen-example": "tsc && npx prisma generate",
+    "package:publish": "./package.sh && cd package && npm publish"
   },
   "author": {
     "name": "Omar Dulaimi",
