@@ -61,7 +61,7 @@ model Post {
 
 will generate the following files
 
-![Joi Schemas](https://raw.githubusercontent.com/omar-dulaimi/prisma-joi-generator/master/joiSchemas.png)
+![Joi Schemas](https://raw.githubusercontent.com/omar-dulaimi/prisma-joi-generator/blob/master/joiSchemas.png)
 
 
 4- Use generated schemas somewhere in your API logic, like middleware or decorator
