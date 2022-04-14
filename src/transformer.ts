@@ -7,6 +7,7 @@ export default class Transformer {
   fields?: PrismaDMMF.SchemaArg[];
   schemaImports?: Set<string>;
   modelOperations?: PrismaDMMF.ModelMapping[];
+  private static outputPath?: string;
   constructor({
     name,
     fields,
@@ -21,6 +22,14 @@ export default class Transformer {
     this.fields = fields ?? [];
     this.modelOperations = modelOperations ?? [];
     this.schemaImports = new Set();
+  }
+
+  static setOutputPath(outPath: string) {
+    this.outputPath = outPath;
+  }
+
+  static getOutputPath() {
+    return this.outputPath;
   }
 
   addSchemaImport(name: string) {
@@ -269,7 +278,10 @@ export default class Transformer {
       });
 
     await writeFileSafely(
-      path.join(__dirname, `schemas/objects/${this.name}.schema.ts`),
+      path.join(
+        Transformer.outputPath,
+        `schemas/objects/${this.name}.schema.ts`,
+      ),
       this.getFinalForm(joiStringFields as unknown as string),
     );
   }
@@ -295,7 +307,7 @@ export default class Transformer {
           `import { ${modelName}WhereUniqueInputSchemaObject } from './objects/${modelName}WhereUniqueInput.schema'`,
         ];
         await writeFileSafely(
-          path.join(__dirname, `schemas/${findUnique}.schema.ts`),
+          path.join(Transformer.outputPath, `schemas/${findUnique}.schema.ts`),
           `${this.getImportsForSchemas(imports)}${this.addExportSchema(
             `Joi.object().keys({ where: Joi.object().keys(${modelName}WhereUniqueInputSchemaObject) }).required()`,
             `${modelName}FindUnique`,
@@ -310,7 +322,7 @@ export default class Transformer {
           `import { ${modelName}WhereUniqueInputSchemaObject } from './objects/${modelName}WhereUniqueInput.schema'`,
         ];
         await writeFileSafely(
-          path.join(__dirname, `schemas/${findFirst}.schema.ts`),
+          path.join(Transformer.outputPath, `schemas/${findFirst}.schema.ts`),
           `${this.getImportsForSchemas(imports)}${this.addExportSchema(
             `Joi.object().keys({ where: Joi.object().keys(${modelName}WhereInputSchemaObject), orderBy: Joi.object().keys(${modelName}OrderByWithRelationInputSchemaObject), cursor: Joi.object().keys(${modelName}WhereUniqueInputSchemaObject), take: Joi.number(), skip: Joi.number()  }).required()`,
             `${modelName}FindFirst`,
@@ -325,7 +337,7 @@ export default class Transformer {
           `import { ${modelName}WhereUniqueInputSchemaObject } from './objects/${modelName}WhereUniqueInput.schema'`,
         ];
         await writeFileSafely(
-          path.join(__dirname, `schemas/${findMany}.schema.ts`),
+          path.join(Transformer.outputPath, `schemas/${findMany}.schema.ts`),
           `${this.getImportsForSchemas(imports)}${this.addExportSchema(
             `Joi.object().keys({ where: Joi.object().keys(${modelName}WhereInputSchemaObject), orderBy: Joi.object().keys(${modelName}OrderByWithRelationInputSchemaObject), cursor: Joi.object().keys(${modelName}WhereUniqueInputSchemaObject), take: Joi.number(), skip: Joi.number()  }).required()`,
             `${modelName}FindMany`,
@@ -338,7 +350,7 @@ export default class Transformer {
           `import { ${modelName}CreateInputSchemaObject } from './objects/${modelName}CreateInput.schema'`,
         ];
         await writeFileSafely(
-          path.join(__dirname, `schemas/${create}.schema.ts`),
+          path.join(Transformer.outputPath, `schemas/${create}.schema.ts`),
           `${this.getImportsForSchemas(imports)}${this.addExportSchema(
             `Joi.object().keys({ data: Joi.object().keys(${modelName}CreateInputSchemaObject)  }).required()`,
             `${modelName}Create`,
@@ -351,7 +363,10 @@ export default class Transformer {
           `import { ${modelName}WhereUniqueInputSchemaObject } from './objects/${modelName}WhereUniqueInput.schema'`,
         ];
         await writeFileSafely(
-          path.join(__dirname, `schemas/${model.delete}.schema.ts`),
+          path.join(
+            Transformer.outputPath,
+            `schemas/${model.delete}.schema.ts`,
+          ),
           `${this.getImportsForSchemas(imports)}${this.addExportSchema(
             `Joi.object().keys({ where: Joi.object().keys(${modelName}WhereUniqueInputSchemaObject)  }).required()`,
             `${modelName}DeleteOne`,
@@ -364,7 +379,7 @@ export default class Transformer {
           `import { ${modelName}WhereInputSchemaObject } from './objects/${modelName}WhereInput.schema'`,
         ];
         await writeFileSafely(
-          path.join(__dirname, `schemas/${deleteMany}.schema.ts`),
+          path.join(Transformer.outputPath, `schemas/${deleteMany}.schema.ts`),
           `${this.getImportsForSchemas(imports)}${this.addExportSchema(
             `Joi.object().keys({ where: Joi.object().keys(${modelName}WhereInputSchemaObject)  }).required()`,
             `${modelName}DeleteMany`,
@@ -378,7 +393,7 @@ export default class Transformer {
           `import { ${modelName}WhereUniqueInputSchemaObject } from './objects/${modelName}WhereUniqueInput.schema'`,
         ];
         await writeFileSafely(
-          path.join(__dirname, `schemas/${update}.schema.ts`),
+          path.join(Transformer.outputPath, `schemas/${update}.schema.ts`),
           `${this.getImportsForSchemas(imports)}${this.addExportSchema(
             `Joi.object().keys({ data: Joi.object().keys(${modelName}UpdateInputSchemaObject), where: Joi.object().keys(${modelName}WhereUniqueInputSchemaObject)  }).required()`,
             `${modelName}UpdateOne`,
@@ -392,7 +407,7 @@ export default class Transformer {
           `import { ${modelName}WhereInputSchemaObject } from './objects/${modelName}WhereInput.schema'`,
         ];
         await writeFileSafely(
-          path.join(__dirname, `schemas/${updateMany}.schema.ts`),
+          path.join(Transformer.outputPath, `schemas/${updateMany}.schema.ts`),
           `${this.getImportsForSchemas(imports)}${this.addExportSchema(
             `Joi.object().keys({ data: Joi.object().keys(${modelName}UpdateManyMutationInputSchemaObject), where: Joi.object().keys(${modelName}WhereInputSchemaObject)  }).required()`,
             `${modelName}UpdateMany`,
@@ -407,7 +422,7 @@ export default class Transformer {
           `import { ${modelName}UpdateInputSchemaObject } from './objects/${modelName}UpdateInput.schema'`,
         ];
         await writeFileSafely(
-          path.join(__dirname, `schemas/${upsert}.schema.ts`),
+          path.join(Transformer.outputPath, `schemas/${upsert}.schema.ts`),
           `${this.getImportsForSchemas(imports)}${this.addExportSchema(
             `Joi.object().keys({ where: Joi.object().keys(${modelName}WhereUniqueInputSchemaObject), data: Joi.object().keys(${modelName}CreateInputSchemaObject), update: Joi.object().keys(${modelName}UpdateInputSchemaObject)  }).required()`,
             `${modelName}Upsert`,
@@ -422,7 +437,7 @@ export default class Transformer {
           `import { ${modelName}WhereUniqueInputSchemaObject } from './objects/${modelName}WhereUniqueInput.schema'`,
         ];
         await writeFileSafely(
-          path.join(__dirname, `schemas/${aggregate}.schema.ts`),
+          path.join(Transformer.outputPath, `schemas/${aggregate}.schema.ts`),
           `${this.getImportsForSchemas(imports)}${this.addExportSchema(
             `Joi.object().keys({ where: Joi.object().keys(${modelName}WhereInputSchemaObject), orderBy: Joi.object().keys(${modelName}OrderByWithRelationInputSchemaObject), cursor: Joi.object().keys(${modelName}WhereUniqueInputSchemaObject), take: Joi.number(), skip: Joi.number()  }).required()`,
             `${modelName}Aggregate`,
@@ -437,7 +452,7 @@ export default class Transformer {
           `import { ${modelName}ScalarWhereWithAggregatesInputSchemaObject } from './objects/${modelName}ScalarWhereWithAggregatesInput.schema'`,
         ];
         await writeFileSafely(
-          path.join(__dirname, `schemas/${groupBy}.schema.ts`),
+          path.join(Transformer.outputPath, `schemas/${groupBy}.schema.ts`),
           `${this.getImportsForSchemas(imports)}${this.addExportSchema(
             `Joi.object().keys({ where: Joi.object().keys(${modelName}WhereInputSchemaObject), orderBy: Joi.object().keys(${modelName}OrderByWithAggregationInputSchemaObject), having: Joi.object().keys(${modelName}ScalarWhereWithAggregatesInputSchemaObject), take: Joi.number(), skip: Joi.number()  }).required()`,
             `${modelName}GroupBy`,

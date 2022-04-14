@@ -19,6 +19,8 @@ export async function generate(options: GeneratorOptions) {
   const prismaClientDmmf = (await import(prismaClientPath))
     .dmmf as PrismaDMMF.Document;
 
+  Transformer.setOutputPath(outputDir);
+
   for (
     let i = 0;
     i < prismaClientDmmf.schema.inputObjectTypes.prisma.length;
