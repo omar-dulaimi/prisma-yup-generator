@@ -2,3 +2,4 @@ node_modules
 lib
 package
 npm-debug.log*
+prisma/generated
