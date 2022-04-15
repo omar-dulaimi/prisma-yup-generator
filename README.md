@@ -18,13 +18,13 @@ Automatically generate [Joi](https://joi.dev/api) schemas from your [Prisma](htt
 Using npm:
 
 ```bash
-$ npm install prisma-joi-generator
+ npm install prisma-joi-generator
 ```
 
 Using yarn:
 
 ```bash
-$ yarn add prisma-joi-generator
+ yarn add prisma-joi-generator
 ```
 
 # Usage
@@ -62,7 +62,7 @@ model Post {
 
 will generate the following files
 
-![Joi Schemas](https://raw.githubusercontent.com/omar-dulaimi/prisma-joi-generator/blob/master/joiSchemas.png)
+![Joi Schemas](https://raw.githubusercontent.com/omar-dulaimi/prisma-joi-generator/master/joiSchemas.png)
 
 
 4- Use generated schemas somewhere in your API logic, like middleware or decorator
