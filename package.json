@@ -1,7 +1,7 @@
 {
   "name": "prisma-joi-generator",
   "version": "0.0.0-rc.7",
-  "description": "Prisma 2 tool to inspect all queries going to the database, formatted and with all params if any.",
+  "description": "Prisma +2 generator to emit Joi schemas from your Prisma schema",
   "repository": "https://github.com/omar-dulaimi/prisma-joi-generator",
   "bin": {
     "prisma-joi-generator": "lib/generator.js"
