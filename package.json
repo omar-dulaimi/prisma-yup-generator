@@ -1,6 +1,6 @@
 {
   "name": "prisma-joi-generator",
-  "version": "0.0.0-rc.8",
+  "version": "0.0.0-rc.9",
   "description": "Prisma +2 generator to emit Joi schemas from your Prisma schema",
   "repository": "https://github.com/omar-dulaimi/prisma-joi-generator",
   "bin": {
