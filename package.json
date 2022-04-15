@@ -1,6 +1,6 @@
 {
   "name": "prisma-joi-generator",
-  "version": "0.0.0-rc.2",
+  "version": "0.0.0-rc.3",
   "description": "Prisma 2 tool to inspect all queries going to the database, formatted and with all params if any.",
   "repository": "https://github.com/omar-dulaimi/prisma-joi-generator",
   "bin": {
@@ -42,7 +42,7 @@
     "typescript": "^4.6.2"
   },
   "files": [
-    "dist"
+    "package"
   ],
   "bugs": {
     "url": "https://github.com/omar-dulaimi/prisma-joi-generator/issues"
