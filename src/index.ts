@@ -4,7 +4,7 @@ import { generate } from './prisma-generator';
 generatorHandler({
   onManifest: () => ({
     defaultOutput: './generated',
-    prettyName: 'Prisma Joi Generator',
+    prettyName: 'Prisma Yup Generator',
     requiresGenerators: ['prisma-client-js'],
   }),
   onGenerate: generate,

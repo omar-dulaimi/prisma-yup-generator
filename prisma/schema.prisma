@@ -2,7 +2,7 @@ generator client {
   provider = "prisma-client-js"
 }
 
-generator joi {
+generator yup {
   provider = "node ./lib/generator.js"
   output   = "./generated"
 }
