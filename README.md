@@ -64,25 +64,22 @@ will generate the following files
 
 ![Yup Schemas](https://raw.githubusercontent.com/omar-dulaimi/prisma-yup-generator/master/yupSchemas.png)
 
-
 4- Use generated schemas somewhere in your API logic, like middleware or decorator
 
 ```ts
-import Yup from "yup";
-import createOnePostSchema from "./prisma/generated/schemas/createOnePost.schema.ts";
+import { PostCreateOneSchema } from './prisma/generated/schemas/createOnePost.schema';
 
-app.post('/blog', async (req, res, next) => { 
-  const { body } = req; 
-  const result = Yup.validate(body, createOnePostSchema); 
+app.post('/blog', async (req, res, next) => {
+  const { body } = req;
+  await PostCreateOneSchema.validate(body);
 });
 ```
 
 ## Additional Options
 
-| Option                |  Description                                    | Type      |  Default      |
-| --------------------- | ----------------------------------------------- | --------- | ------------- |
-| `output`              | Output directory for the generated yup schemas  | `string`  | `./generated` |
-
+| Option   |  Description                                   | Type     |  Default      |
+| -------- | ---------------------------------------------- | -------- | ------------- |
+| `output` | Output directory for the generated yup schemas | `string` | `./generated` |
 
 Use additional options in the `schema.prisma`
 
