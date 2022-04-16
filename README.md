@@ -29,7 +29,9 @@ Using yarn:
 
 # Usage
 
-1- Add the generator to you Prisma schema
+1- Star this repo 😉 
+
+2- Add the generator to your Prisma schema
 
 ```prisma
 generator yup {
@@ -37,7 +39,7 @@ generator yup {
 }
 ```
 
-2- Running `npx prisma generate` for the following [schema.prisma](https://github.com/omar-dulaimi/prisma-yup-generator/blob/master/prisma/schema.prisma)
+3- Running `npx prisma generate` for the following schema.prisma
 
 ```prisma
 model User {
