@@ -60,22 +60,22 @@ export default class Transformer {
         if (inputType.type === this.name) {
           return `  ${
             field.name
-          }: Joi.array().items(${`Joi.link('#${inputType.type}')`})`;
+          }: Yup.array().of(${`Yup.link('#${inputType.type}')`})`;
         } else {
           return `  ${field.name}: ${
             inputType.type === 'SortOrder'
               ? `${`${inputType.type}Schema`}`
-              : `Joi.array().items(Joi.object().keys(${`${inputType.type}SchemaObject`}))`
+              : `Yup.array().of(Yup.object().noUnknown().shape(${`${inputType.type}SchemaObject`}))`
           }`;
         }
       } else {
         if (inputType.type === this.name) {
-          return `  ${field.name}: ${`Joi.link('#${inputType.type}')`}`;
+          return `  ${field.name}: ${`Yup.link('#${inputType.type}')`}`;
         } else {
           return `  ${field.name}: ${
             inputType.type === 'SortOrder'
               ? `${`${inputType.type}Schema`}`
-              : `Joi.object().keys(${`${inputType.type}SchemaObject`})`
+              : `Yup.object().noUnknown().shape(${`${inputType.type}SchemaObject`})`
           }`;
         }
       }
@@ -84,22 +84,22 @@ export default class Transformer {
     if (inputsLength > 1) {
       if (inputType.isList) {
         if (inputType.type === this.name) {
-          return `Joi.array().items(${`Joi.link('#${inputType.type}')`})`;
+          return `Yup.array().of(${`Yup.link('#${inputType.type}')`})`;
         } else {
           return `${
             inputType.type === 'SortOrder'
               ? `${`${inputType.type}Schema`}`
-              : `Joi.array().items(Joi.object().keys(${`${inputType.type}SchemaObject`}))`
+              : `Yup.array().of(Yup.object().noUnknown().shape(${`${inputType.type}SchemaObject`}))`
           }`;
         }
       } else {
         if (inputType.type === this.name) {
-          return `${`Joi.link('#${inputType.type}')`}`;
+          return `${`Yup.link('#${inputType.type}')`}`;
         } else {
           return `${
             inputType.type === 'SortOrder'
               ? `${`${inputType.type}Schema`}`
-              : `Joi.object().keys(${`${inputType.type}SchemaObject`})`
+              : `Yup.object().noUnknown().shape(${`${inputType.type}SchemaObject`})`
           }`;
         }
       }
@@ -118,18 +118,14 @@ export default class Transformer {
         if (inputType.type === 'String') {
           return [
             `  ${field.name}: ${
-              inputType.isList
-                ? 'Joi.array().items(Joi.string())'
-                : 'Joi.string()'
+              inputType.isList ? 'Yup.array().of(Yup.string())' : 'Yup.string()'
             }`,
             field,
           ];
         } else if (inputType.type === 'Int' || inputType.type === 'Float') {
           return [
             `  ${field.name}: ${
-              inputType.isList
-                ? 'Joi.array().items(Joi.number())'
-                : 'Joi.number()'
+              inputType.isList ? 'Yup.array().of(Yup.number())' : 'Yup.number()'
             }`,
             field,
           ];
@@ -137,15 +133,15 @@ export default class Transformer {
           return [
             `  ${field.name}: ${
               inputType.isList
-                ? 'Joi.array().items(Joi.boolean())'
-                : 'Joi.boolean()'
+                ? 'Yup.array().of(Yup.boolean())'
+                : 'Yup.boolean()'
             }`,
             field,
           ];
         } else if (inputType.type === 'DateTime') {
           return [
             `  ${field.name}: ${
-              inputType.isList ? 'Joi.array().items(Joi.date())' : 'Joi.date()'
+              inputType.isList ? 'Yup.array().of(Yup.date())' : 'Yup.date()'
             }`,
             field,
           ];
@@ -170,20 +166,20 @@ export default class Transformer {
           if (inputType.type === 'String') {
             result.push(
               inputType.isList
-                ? 'Joi.array().items(Joi.string())'
-                : 'Joi.string()',
+                ? 'Yup.array().of(Yup.string())'
+                : 'Yup.string()',
             );
           } else if (inputType.type === 'Int' || inputType.type === 'Float') {
             result.push(
               inputType.isList
-                ? 'Joi.array().items(Joi.number())'
-                : 'Joi.number()',
+                ? 'Yup.array().of(Yup.number())'
+                : 'Yup.number()',
             );
           } else if (inputType.type === 'Boolean') {
             result.push(
               inputType.isList
-                ? 'Joi.array().items(Joi.boolean())'
-                : 'Joi.boolean()',
+                ? 'Yup.array().of(Yup.boolean())'
+                : 'Yup.boolean()',
             );
           } else {
             if (inputType.namespace === 'prisma') {
@@ -203,9 +199,9 @@ export default class Transformer {
       if (alternatives.length > 0) {
         lines = [
           [
-            `  ${field.name}: Joi.alternatives().try(${alternatives.join(
+            `  ${field.name}: Yup.mixed().oneOfSchemas([${alternatives.join(
               ',\r\n',
-            )})`,
+            )}])`,
             field,
             true,
           ],
@@ -219,54 +215,55 @@ export default class Transformer {
   }
 
   getFieldValidators(
-    joiStringWithMainType: string,
+    yupStringWithMainType: string,
     field: PrismaDMMF.SchemaArg,
   ) {
-    let joiStringWithAllValidators = joiStringWithMainType;
+    let yupStringWithAllValidators = yupStringWithMainType;
     const { isRequired, isNullable } = field;
     if (isRequired) {
-      joiStringWithAllValidators += '.required()';
+      yupStringWithAllValidators += '.required()';
     }
     if (isNullable) {
-      joiStringWithAllValidators += '.allow(null)';
+      yupStringWithAllValidators += '.allow(null)';
     }
-    return joiStringWithAllValidators;
+    return yupStringWithAllValidators;
   }
 
   wrapWithObject({
-    joiStringFields,
+    yupStringFields,
     isArray = true,
     forData = false,
   }: {
-    joiStringFields: string;
+    yupStringFields: string;
     isArray?: boolean;
     forData?: boolean;
   }) {
     let wrapped = '{';
     wrapped += '\n';
     wrapped += isArray
-      ? '  ' + (joiStringFields as unknown as Array<string>).join(',\r\n')
-      : '  ' + joiStringFields;
+      ? '  ' + (yupStringFields as unknown as Array<string>).join(',\r\n')
+      : '  ' + yupStringFields;
     wrapped += '\n';
     wrapped += forData ? '  ' + '}' : '}';
     return wrapped;
   }
 
-  getImportJoi() {
-    let joiImportStatement = "import Joi from 'joi';";
-    joiImportStatement += '\n';
-    return joiImportStatement;
+  getImportYup() {
+    let yupImportStatement = "import * as Yup from 'yup';";
+    yupImportStatement += '\n';
+    return yupImportStatement;
   }
 
   getImportsForSchemaObjects() {
-    let imports = this.getImportJoi();
+    let imports = this.getImportYup();
+    imports += this.getHelpersImports();
     imports += this.getAllSchemaImports();
     imports += '\n\n';
     return imports;
   }
 
   getImportsForSchemas(additionalImports: Array<string>) {
-    let imports = this.getImportJoi();
+    let imports = this.getImportYup();
     imports += [...additionalImports].join(';\r\n');
     imports += '\n\n';
     return imports;
@@ -279,13 +276,26 @@ export default class Transformer {
   addExportSchema(schema: string, name: string) {
     return `export const ${name}Schema = ${schema}`;
   }
-  getFinalForm(joiStringFields: string) {
-    return `${this.getImportsForSchemaObjects()}${this.addExportSchemaObject(
-      this.wrapWithObject({ joiStringFields }),
+
+  getImportNoCheck() {
+    let imports = '// @ts-nocheck';
+    imports += '\n';
+    return imports;
+  }
+
+  getHelpersImports() {
+    let imports = 'import "../helpers/oneOfSchemas.helper.ts"';
+    imports += '\n';
+    return imports;
+  }
+
+  getFinalForm(yupStringFields: string) {
+    return `${this.getImportNoCheck()}${this.getImportsForSchemaObjects()}${this.addExportSchemaObject(
+      this.wrapWithObject({ yupStringFields }),
     )}`;
   }
   async printSchemaObjects() {
-    const joiStringFields = (this.fields ?? [])
+    const yupStringFields = (this.fields ?? [])
       .map((field) => {
         const value = this.getSchemaObjectLine(field);
         return value;
@@ -293,10 +303,10 @@ export default class Transformer {
       .flatMap((item) => item)
       .filter((item) => item && item.length > 0)
       .map((item) => {
-        const [joiStringWithMainType, field, skipValidators] = item;
+        const [yupStringWithMainType, field, skipValidators] = item;
         const value = skipValidators
-          ? joiStringWithMainType
-          : this.getFieldValidators(joiStringWithMainType, field);
+          ? yupStringWithMainType
+          : this.getFieldValidators(yupStringWithMainType, field);
         return value;
       });
 
@@ -305,7 +315,7 @@ export default class Transformer {
         Transformer.outputPath,
         `schemas/objects/${this.name}.schema.ts`,
       ),
-      this.getFinalForm(joiStringFields as unknown as string),
+      this.getFinalForm(yupStringFields as unknown as string),
     );
   }
 
@@ -332,7 +342,7 @@ export default class Transformer {
         await writeFileSafely(
           path.join(Transformer.outputPath, `schemas/${findUnique}.schema.ts`),
           `${this.getImportsForSchemas(imports)}${this.addExportSchema(
-            `Joi.object().keys({ where: Joi.object().keys(${modelName}WhereUniqueInputSchemaObject) }).required()`,
+            `Yup.object({ where: Yup.object(${modelName}WhereUniqueInputSchemaObject) }).required()`,
             `${modelName}FindUnique`,
           )}`,
         );
@@ -348,7 +358,7 @@ export default class Transformer {
         await writeFileSafely(
           path.join(Transformer.outputPath, `schemas/${findFirst}.schema.ts`),
           `${this.getImportsForSchemas(imports)}${this.addExportSchema(
-            `Joi.object().keys({ where: Joi.object().keys(${modelName}WhereInputSchemaObject), orderBy: Joi.object().keys(${modelName}OrderByWithRelationInputSchemaObject), cursor: Joi.object().keys(${modelName}WhereUniqueInputSchemaObject), take: Joi.number(), skip: Joi.number(), distinct: Joi.array().items(${modelName}ScalarFieldEnumSchema) }).required()`,
+            `Yup.object({ where: Yup.object(${modelName}WhereInputSchemaObject), orderBy: Yup.object(${modelName}OrderByWithRelationInputSchemaObject), cursor: Yup.object(${modelName}WhereUniqueInputSchemaObject), take: Yup.number(), skip: Yup.number(), distinct: Yup.array().of(${modelName}ScalarFieldEnumSchema) }).required()`,
             `${modelName}FindFirst`,
           )}`,
         );
@@ -364,7 +374,7 @@ export default class Transformer {
         await writeFileSafely(
           path.join(Transformer.outputPath, `schemas/${findMany}.schema.ts`),
           `${this.getImportsForSchemas(imports)}${this.addExportSchema(
-            `Joi.object().keys({ where: Joi.object().keys(${modelName}WhereInputSchemaObject), orderBy: Joi.object().keys(${modelName}OrderByWithRelationInputSchemaObject), cursor: Joi.object().keys(${modelName}WhereUniqueInputSchemaObject), take: Joi.number(), skip: Joi.number(), distinct: Joi.array().items(${modelName}ScalarFieldEnumSchema)  }).required()`,
+            `Yup.object({ where: Yup.object(${modelName}WhereInputSchemaObject), orderBy: Yup.object(${modelName}OrderByWithRelationInputSchemaObject), cursor: Yup.object(${modelName}WhereUniqueInputSchemaObject), take: Yup.number(), skip: Yup.number(), distinct: Yup.array().of(${modelName}ScalarFieldEnumSchema)  }).required()`,
             `${modelName}FindMany`,
           )}`,
         );
@@ -377,7 +387,7 @@ export default class Transformer {
         await writeFileSafely(
           path.join(Transformer.outputPath, `schemas/${create}.schema.ts`),
           `${this.getImportsForSchemas(imports)}${this.addExportSchema(
-            `Joi.object().keys({ data: Joi.object().keys(${modelName}CreateInputSchemaObject)  }).required()`,
+            `Yup.object({ data: Yup.object(${modelName}CreateInputSchemaObject)  }).required()`,
             `${modelName}Create`,
           )}`,
         );
@@ -393,7 +403,7 @@ export default class Transformer {
             `schemas/${model.delete}.schema.ts`,
           ),
           `${this.getImportsForSchemas(imports)}${this.addExportSchema(
-            `Joi.object().keys({ where: Joi.object().keys(${modelName}WhereUniqueInputSchemaObject)  }).required()`,
+            `Yup.object({ where: Yup.object(${modelName}WhereUniqueInputSchemaObject)  }).required()`,
             `${modelName}DeleteOne`,
           )}`,
         );
@@ -406,7 +416,7 @@ export default class Transformer {
         await writeFileSafely(
           path.join(Transformer.outputPath, `schemas/${deleteMany}.schema.ts`),
           `${this.getImportsForSchemas(imports)}${this.addExportSchema(
-            `Joi.object().keys({ where: Joi.object().keys(${modelName}WhereInputSchemaObject)  }).required()`,
+            `Yup.object({ where: Yup.object(${modelName}WhereInputSchemaObject)  }).required()`,
             `${modelName}DeleteMany`,
           )}`,
         );
@@ -420,7 +430,7 @@ export default class Transformer {
         await writeFileSafely(
           path.join(Transformer.outputPath, `schemas/${update}.schema.ts`),
           `${this.getImportsForSchemas(imports)}${this.addExportSchema(
-            `Joi.object().keys({ data: Joi.object().keys(${modelName}UpdateInputSchemaObject), where: Joi.object().keys(${modelName}WhereUniqueInputSchemaObject)  }).required()`,
+            `Yup.object({ data: Yup.object(${modelName}UpdateInputSchemaObject), where: Yup.object(${modelName}WhereUniqueInputSchemaObject)  }).required()`,
             `${modelName}UpdateOne`,
           )}`,
         );
@@ -434,7 +444,7 @@ export default class Transformer {
         await writeFileSafely(
           path.join(Transformer.outputPath, `schemas/${updateMany}.schema.ts`),
           `${this.getImportsForSchemas(imports)}${this.addExportSchema(
-            `Joi.object().keys({ data: Joi.object().keys(${modelName}UpdateManyMutationInputSchemaObject), where: Joi.object().keys(${modelName}WhereInputSchemaObject)  }).required()`,
+            `Yup.object({ data: Yup.object(${modelName}UpdateManyMutationInputSchemaObject), where: Yup.object(${modelName}WhereInputSchemaObject)  }).required()`,
             `${modelName}UpdateMany`,
           )}`,
         );
@@ -449,7 +459,7 @@ export default class Transformer {
         await writeFileSafely(
           path.join(Transformer.outputPath, `schemas/${upsert}.schema.ts`),
           `${this.getImportsForSchemas(imports)}${this.addExportSchema(
-            `Joi.object().keys({ where: Joi.object().keys(${modelName}WhereUniqueInputSchemaObject), data: Joi.object().keys(${modelName}CreateInputSchemaObject), update: Joi.object().keys(${modelName}UpdateInputSchemaObject)  }).required()`,
+            `Yup.object({ where: Yup.object(${modelName}WhereUniqueInputSchemaObject), data: Yup.object(${modelName}CreateInputSchemaObject), update: Yup.object(${modelName}UpdateInputSchemaObject)  }).required()`,
             `${modelName}Upsert`,
           )}`,
         );
@@ -464,7 +474,7 @@ export default class Transformer {
         await writeFileSafely(
           path.join(Transformer.outputPath, `schemas/${aggregate}.schema.ts`),
           `${this.getImportsForSchemas(imports)}${this.addExportSchema(
-            `Joi.object().keys({ where: Joi.object().keys(${modelName}WhereInputSchemaObject), orderBy: Joi.object().keys(${modelName}OrderByWithRelationInputSchemaObject), cursor: Joi.object().keys(${modelName}WhereUniqueInputSchemaObject), take: Joi.number(), skip: Joi.number()  }).required()`,
+            `Yup.object({ where: Yup.object(${modelName}WhereInputSchemaObject), orderBy: Yup.object(${modelName}OrderByWithRelationInputSchemaObject), cursor: Yup.object(${modelName}WhereUniqueInputSchemaObject), take: Yup.number(), skip: Yup.number()  }).required()`,
             `${modelName}Aggregate`,
           )}`,
         );
@@ -480,12 +490,13 @@ export default class Transformer {
         await writeFileSafely(
           path.join(Transformer.outputPath, `schemas/${groupBy}.schema.ts`),
           `${this.getImportsForSchemas(imports)}${this.addExportSchema(
-            `Joi.object().keys({ where: Joi.object().keys(${modelName}WhereInputSchemaObject), orderBy: Joi.object().keys(${modelName}OrderByWithAggregationInputSchemaObject), having: Joi.object().keys(${modelName}ScalarWhereWithAggregatesInputSchemaObject), take: Joi.number(), skip: Joi.number(), by: Joi.array().items(${modelName}ScalarFieldEnumSchema).required()  }).required()`,
+            `Yup.object({ where: Yup.object(${modelName}WhereInputSchemaObject), orderBy: Yup.object(${modelName}OrderByWithAggregationInputSchemaObject), having: Yup.object(${modelName}ScalarWhereWithAggregatesInputSchemaObject), take: Yup.number(), skip: Yup.number(), by: Yup.array().of(${modelName}ScalarFieldEnumSchema).required()  }).required()`,
             `${modelName}GroupBy`,
           )}`,
         );
       }
     }
+    await this.printHelpers();
   }
 
   async printEnumSchemas() {
@@ -494,11 +505,28 @@ export default class Transformer {
 
       await writeFileSafely(
         path.join(Transformer.outputPath, `schemas/enums/${name}.schema.ts`),
-        `${this.getImportJoi()}\n${this.addExportSchema(
-          `Joi.string().valid(...${JSON.stringify(values)})`,
+        `${this.getImportYup()}\n${this.addExportSchema(
+          `Yup.string().valid(...${JSON.stringify(values)})`,
           `${name}`,
         )}`,
       );
     }
+  }
+
+  async printHelpers() {
+    await writeFileSafely(
+      path.join(
+        Transformer.outputPath,
+        `schemas/helpers/oneOfSchemas.helper.ts`,
+      ),
+      `${this.getImportYup()}\nYup.addMethod(Yup.MixedSchema, "oneOfSchemas", function (schemas: Yup.AnySchema[]) {
+        return this.test(
+          "one-of-schemas",
+          "Not all items in \${path} match one of the allowed schemas",
+          (item) =>
+            schemas.some((schema) => schema.isValidSync(item, { strict: true }))
+        );
+      });`,
+    );
   }
 }

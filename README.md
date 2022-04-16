@@ -62,7 +62,7 @@ model Post {
 
 will generate the following files
 
-![Yup Schemas](https://raw.githubusercontent.com/omar-dulaimi/prisma-yup-generator/master/joiSchemas.png)
+![Yup Schemas](https://raw.githubusercontent.com/omar-dulaimi/prisma-yup-generator/master/yupSchemas.png)
 
 
 4- Use generated schemas somewhere in your API logic, like middleware or decorator

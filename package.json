@@ -33,7 +33,8 @@
     "@prisma/generator-helper": "^3.12.0",
     "@prisma/sdk": "^3.12.0",
     "prettier": "^2.6.2",
-    "tslib": "^2.3.1"
+    "tslib": "^2.3.1",
+    "yup": "^0.32.11"
   },
   "devDependencies": {
     "@types/node": "^17.0.23",
