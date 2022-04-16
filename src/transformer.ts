@@ -506,7 +506,7 @@ export default class Transformer {
       await writeFileSafely(
         path.join(Transformer.outputPath, `schemas/enums/${name}.schema.ts`),
         `${this.getImportYup()}\n${this.addExportSchema(
-          `Yup.string().valid(...${JSON.stringify(values)})`,
+          `Yup.mixed().oneOf(${JSON.stringify(values)})`,
           `${name}`,
         )}`,
       );
