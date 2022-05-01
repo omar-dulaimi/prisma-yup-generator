@@ -43,7 +43,7 @@ export default class Transformer {
   getAllSchemaImports() {
     return [...(this.schemaImports ?? [])]
       .map((name) =>
-        name === 'SortOrder'
+        name === 'SortOrder' || name === 'QueryMode'
           ? `import { ${name}Schema } from '../enums/${name}.schema'`
           : `import { ${name}SchemaObject } from './${name}.schema'`,
       )
@@ -63,7 +63,7 @@ export default class Transformer {
           }: Yup.array().of(${`Yup.link('#${inputType.type}')`})`;
         } else {
           return `  ${field.name}: ${
-            inputType.type === 'SortOrder'
+            ['SortOrder', 'QueryMode'].includes(inputType.type as string)
               ? `${`${inputType.type}Schema`}`
               : `Yup.array().of(Yup.object().noUnknown().shape(${`${inputType.type}SchemaObject`}))`
           }`;
@@ -73,7 +73,7 @@ export default class Transformer {
           return `  ${field.name}: ${`Yup.link('#${inputType.type}')`}`;
         } else {
           return `  ${field.name}: ${
-            inputType.type === 'SortOrder'
+            ['SortOrder', 'QueryMode'].includes(inputType.type as string)
               ? `${`${inputType.type}Schema`}`
               : `Yup.object().noUnknown().shape(${`${inputType.type}SchemaObject`})`
           }`;
@@ -87,7 +87,7 @@ export default class Transformer {
           return `Yup.array().of(${`Yup.link('#${inputType.type}')`})`;
         } else {
           return `${
-            inputType.type === 'SortOrder'
+            ['SortOrder', 'QueryMode'].includes(inputType.type as string)
               ? `${`${inputType.type}Schema`}`
               : `Yup.array().of(Yup.object().noUnknown().shape(${`${inputType.type}SchemaObject`}))`
           }`;
@@ -97,7 +97,7 @@ export default class Transformer {
           return `${`Yup.link('#${inputType.type}')`}`;
         } else {
           return `${
-            inputType.type === 'SortOrder'
+            ['SortOrder', 'QueryMode'].includes(inputType.type as string)
               ? `${`${inputType.type}Schema`}`
               : `Yup.object().noUnknown().shape(${`${inputType.type}SchemaObject`})`
           }`;
