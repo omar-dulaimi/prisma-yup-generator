@@ -1,6 +1,6 @@
 {
   "name": "prisma-yup-generator",
-  "version": "0.0.0-rc.2",
+  "version": "0.0.0-rc.3",
   "description": "Prisma +2 generator to emit Yup schemas from your Prisma schema",
   "repository": "https://github.com/omar-dulaimi/prisma-yup-generator",
   "bin": {
