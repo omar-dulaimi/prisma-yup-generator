@@ -44,9 +44,13 @@ export default class Transformer {
     return [...(this.schemaImports ?? [])]
       .map((name) =>
         name === 'SortOrder' || name === 'QueryMode'
-          ? `import { ${name}Schema } from '../enums/${name}.schema'`
-          : `import { ${name}SchemaObject } from './${name}.schema'`,
+          ? `import { ${name}Schema } from '../enums/${name}.schema';`
+          : [
+              `import { ${name}SchemaObject } from './${name}.schema';`,
+              `import { ${name}ObjectSchema } from './${name}.schema';`,
+            ],
       )
+      .flatMap((item) => item)
       .join(';\r\n');
   }
 
@@ -60,7 +64,7 @@ export default class Transformer {
         if (inputType.type === this.name) {
           return `  ${
             field.name
-          }: Yup.array().of(${`Yup.link('#${inputType.type}')`})`;
+          }: Yup.array().of(${`Yup.lazy(() => ${inputType.type}ObjectSchema.default(undefined)`}))`;
         } else {
           return `  ${field.name}: ${
             ['SortOrder', 'QueryMode'].includes(inputType.type as string)
@@ -70,7 +74,9 @@ export default class Transformer {
         }
       } else {
         if (inputType.type === this.name) {
-          return `  ${field.name}: ${`Yup.link('#${inputType.type}')`}`;
+          return `  ${
+            field.name
+          }: ${`Yup.lazy(() => ${inputType.type}ObjectSchema.default(undefined))`}`;
         } else {
           return `  ${field.name}: ${
             ['SortOrder', 'QueryMode'].includes(inputType.type as string)
@@ -84,7 +90,7 @@ export default class Transformer {
     if (inputsLength > 1) {
       if (inputType.isList) {
         if (inputType.type === this.name) {
-          return `Yup.array().of(${`Yup.link('#${inputType.type}')`})`;
+          return `Yup.array().of(${`Yup.lazy(() => ${inputType.type}ObjectSchema.default(undefined)`}))`;
         } else {
           return `${
             ['SortOrder', 'QueryMode'].includes(inputType.type as string)
@@ -94,7 +100,7 @@ export default class Transformer {
         }
       } else {
         if (inputType.type === this.name) {
-          return `${`Yup.link('#${inputType.type}')`}`;
+          return `${`Yup.lazy(() => ${inputType.type}ObjectSchema.default(undefined))`}`;
         } else {
           return `${
             ['SortOrder', 'QueryMode'].includes(inputType.type as string)
@@ -248,6 +254,15 @@ export default class Transformer {
     return wrapped;
   }
 
+  wrapWithYupObject({ yupStringFields }: { yupStringFields: string }) {
+    let wrapped = 'Yup.object({';
+    wrapped += '\n';
+    wrapped += '  ' + yupStringFields;
+    wrapped += '\n';
+    wrapped += '})';
+    return wrapped;
+  }
+
   getImportYup() {
     let yupImportStatement = "import * as Yup from 'yup';";
     yupImportStatement += '\n';
@@ -270,7 +285,11 @@ export default class Transformer {
   }
 
   addExportSchemaObject(schema: string) {
-    return `export const ${this.name}SchemaObject = ${schema}`;
+    return `export const ${this.name}SchemaObject = ${schema};`;
+  }
+
+  addExportObjectSchema(schema: string) {
+    return `export const ${this.name}ObjectSchema = ${schema};`;
   }
 
   addExportSchema(schema: string, name: string) {
@@ -290,9 +309,13 @@ export default class Transformer {
   }
 
   getFinalForm(yupStringFields: string) {
-    return `${this.getImportNoCheck()}${this.getImportsForSchemaObjects()}${this.addExportSchemaObject(
+    const schemaObject = `${this.addExportSchemaObject(
       this.wrapWithObject({ yupStringFields }),
-    )}`;
+    )}\n`;
+    const objectSchema = `${this.addExportObjectSchema(
+      this.wrapWithYupObject({ yupStringFields }),
+    )}\n`;
+    return `${this.getImportNoCheck()}${this.getImportsForSchemaObjects()}${schemaObject}\n${objectSchema}`;
   }
   async printSchemaObjects() {
     const yupStringFields = (this.fields ?? [])
