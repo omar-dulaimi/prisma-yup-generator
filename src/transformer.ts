@@ -46,10 +46,7 @@ export default class Transformer {
       .map((name) =>
         Transformer.enumNames.includes(name)
           ? `import { ${name}Schema } from '../enums/${name}.schema';`
-          : [
-              `import { ${name}SchemaObject } from './${name}.schema';`,
-              `import { ${name}ObjectSchema } from './${name}.schema';`,
-            ],
+          : [`import { ${name}ObjectSchema } from './${name}.schema';`],
       )
       .flatMap((item) => item)
       .join(';\r\n');
@@ -70,7 +67,7 @@ export default class Transformer {
           return `  ${field.name}: ${
             Transformer.enumNames.includes(inputType.type as string)
               ? `${`${inputType.type}Schema`}`
-              : `Yup.array().of(Yup.object().noUnknown().shape(${`${inputType.type}SchemaObject`}))`
+              : `Yup.array().of(${`${inputType.type}ObjectSchema`})`
           }`;
         }
       } else {
@@ -82,7 +79,7 @@ export default class Transformer {
           return `  ${field.name}: ${
             Transformer.enumNames.includes(inputType.type as string)
               ? `${`${inputType.type}Schema`}`
-              : `Yup.object().noUnknown().shape(${`${inputType.type}SchemaObject`})`
+              : `${`${inputType.type}ObjectSchema`}`
           }`;
         }
       }
@@ -96,7 +93,7 @@ export default class Transformer {
           return `${
             Transformer.enumNames.includes(inputType.type as string)
               ? `${`${inputType.type}Schema`}`
-              : `Yup.array().of(Yup.object().noUnknown().shape(${`${inputType.type}SchemaObject`}))`
+              : `Yup.array().of(${`${inputType.type}ObjectSchema`})`
           }`;
         }
       } else {
@@ -106,7 +103,7 @@ export default class Transformer {
           return `${
             Transformer.enumNames.includes(inputType.type as string)
               ? `${`${inputType.type}Schema`}`
-              : `Yup.object().noUnknown().shape(${`${inputType.type}SchemaObject`})`
+              : `${`${inputType.type}ObjectSchema`}`
           }`;
         }
       }
@@ -276,7 +273,7 @@ export default class Transformer {
     return yupImportStatement;
   }
 
-  getImportsForSchemaObjects() {
+  getImportsForObjectSchemas() {
     let imports = this.getImportYup();
     imports += this.getHelpersImports();
     imports += this.getAllSchemaImports();
@@ -316,13 +313,10 @@ export default class Transformer {
   }
 
   getFinalForm(yupStringFields: string) {
-    const schemaObject = `${this.addExportSchemaObject(
-      this.wrapWithObject({ yupStringFields }),
-    )}\n`;
     const objectSchema = `${this.addExportObjectSchema(
       this.wrapWithYupObject({ yupStringFields }),
     )}\n`;
-    return `${this.getImportNoCheck()}${this.getImportsForSchemaObjects()}${schemaObject}\n${objectSchema}`;
+    return `${this.getImportNoCheck()}${this.getImportsForObjectSchemas()}${objectSchema}`;
   }
   async printSchemaObjects() {
     const yupStringFields = (this.fields ?? [])
@@ -367,12 +361,12 @@ export default class Transformer {
 
       if (findUnique) {
         const imports = [
-          `import { ${modelName}WhereUniqueInputSchemaObject } from './objects/${modelName}WhereUniqueInput.schema'`,
+          `import { ${modelName}WhereUniqueInputObjectSchema } from './objects/${modelName}WhereUniqueInput.schema'`,
         ];
         await writeFileSafely(
           path.join(Transformer.outputPath, `schemas/${findUnique}.schema.ts`),
           `${this.getImportsForSchemas(imports)}${this.addExportSchema(
-            `Yup.object({ where: Yup.object(${modelName}WhereUniqueInputSchemaObject) }).required()`,
+            `Yup.object({ where: ${modelName}WhereUniqueInputObjectSchema }).required()`,
             `${modelName}FindUnique`,
           )}`,
         );
@@ -380,15 +374,15 @@ export default class Transformer {
 
       if (findFirst) {
         const imports = [
-          `import { ${modelName}WhereInputSchemaObject } from './objects/${modelName}WhereInput.schema'`,
-          `import { ${modelName}OrderByWithRelationInputSchemaObject } from './objects/${modelName}OrderByWithRelationInput.schema'`,
-          `import { ${modelName}WhereUniqueInputSchemaObject } from './objects/${modelName}WhereUniqueInput.schema'`,
+          `import { ${modelName}WhereInputObjectSchema } from './objects/${modelName}WhereInput.schema'`,
+          `import { ${modelName}OrderByWithRelationInputObjectSchema } from './objects/${modelName}OrderByWithRelationInput.schema'`,
+          `import { ${modelName}WhereUniqueInputObjectSchema } from './objects/${modelName}WhereUniqueInput.schema'`,
           `import { ${modelName}ScalarFieldEnumSchema } from './enums/${modelName}ScalarFieldEnum.schema'`,
         ];
         await writeFileSafely(
           path.join(Transformer.outputPath, `schemas/${findFirst}.schema.ts`),
           `${this.getImportsForSchemas(imports)}${this.addExportSchema(
-            `Yup.object({ where: Yup.object(${modelName}WhereInputSchemaObject), orderBy: Yup.object(${modelName}OrderByWithRelationInputSchemaObject), cursor: Yup.object(${modelName}WhereUniqueInputSchemaObject), take: Yup.number(), skip: Yup.number(), distinct: Yup.array().of(${modelName}ScalarFieldEnumSchema) }).required()`,
+            `Yup.object({ where: ${modelName}WhereInputObjectSchema, orderBy: ${modelName}OrderByWithRelationInputObjectSchema, cursor: ${modelName}WhereUniqueInputObjectSchema, take: Yup.number(), skip: Yup.number(), distinct: Yup.array().of(${modelName}ScalarFieldEnumSchema) }).required()`,
             `${modelName}FindFirst`,
           )}`,
         );
@@ -396,15 +390,15 @@ export default class Transformer {
 
       if (findMany) {
         const imports = [
-          `import { ${modelName}WhereInputSchemaObject } from './objects/${modelName}WhereInput.schema'`,
-          `import { ${modelName}OrderByWithRelationInputSchemaObject } from './objects/${modelName}OrderByWithRelationInput.schema'`,
-          `import { ${modelName}WhereUniqueInputSchemaObject } from './objects/${modelName}WhereUniqueInput.schema'`,
+          `import { ${modelName}WhereInputObjectSchema } from './objects/${modelName}WhereInput.schema'`,
+          `import { ${modelName}OrderByWithRelationInputObjectSchema } from './objects/${modelName}OrderByWithRelationInput.schema'`,
+          `import { ${modelName}WhereUniqueInputObjectSchema } from './objects/${modelName}WhereUniqueInput.schema'`,
           `import { ${modelName}ScalarFieldEnumSchema } from './enums/${modelName}ScalarFieldEnum.schema'`,
         ];
         await writeFileSafely(
           path.join(Transformer.outputPath, `schemas/${findMany}.schema.ts`),
           `${this.getImportsForSchemas(imports)}${this.addExportSchema(
-            `Yup.object({ where: Yup.object(${modelName}WhereInputSchemaObject), orderBy: Yup.object(${modelName}OrderByWithRelationInputSchemaObject), cursor: Yup.object(${modelName}WhereUniqueInputSchemaObject), take: Yup.number(), skip: Yup.number(), distinct: Yup.array().of(${modelName}ScalarFieldEnumSchema)  }).required()`,
+            `Yup.object({ where: ${modelName}WhereInputObjectSchema, orderBy: ${modelName}OrderByWithRelationInputObjectSchema, cursor: ${modelName}WhereUniqueInputObjectSchema, take: Yup.number(), skip: Yup.number(), distinct: Yup.array().of(${modelName}ScalarFieldEnumSchema)  }).required()`,
             `${modelName}FindMany`,
           )}`,
         );
@@ -412,12 +406,12 @@ export default class Transformer {
 
       if (create) {
         const imports = [
-          `import { ${modelName}CreateInputSchemaObject } from './objects/${modelName}CreateInput.schema'`,
+          `import { ${modelName}CreateInputObjectSchema } from './objects/${modelName}CreateInput.schema'`,
         ];
         await writeFileSafely(
           path.join(Transformer.outputPath, `schemas/${create}.schema.ts`),
           `${this.getImportsForSchemas(imports)}${this.addExportSchema(
-            `Yup.object({ data: Yup.object(${modelName}CreateInputSchemaObject)  }).required()`,
+            `Yup.object({ data: ${modelName}CreateInputObjectSchema  }).required()`,
             `${modelName}Create`,
           )}`,
         );
@@ -425,7 +419,7 @@ export default class Transformer {
 
       if (model.delete) {
         const imports = [
-          `import { ${modelName}WhereUniqueInputSchemaObject } from './objects/${modelName}WhereUniqueInput.schema'`,
+          `import { ${modelName}WhereUniqueInputObjectSchema } from './objects/${modelName}WhereUniqueInput.schema'`,
         ];
         await writeFileSafely(
           path.join(
@@ -433,7 +427,7 @@ export default class Transformer {
             `schemas/${model.delete}.schema.ts`,
           ),
           `${this.getImportsForSchemas(imports)}${this.addExportSchema(
-            `Yup.object({ where: Yup.object(${modelName}WhereUniqueInputSchemaObject)  }).required()`,
+            `Yup.object({ where: ${modelName}WhereUniqueInputObjectSchema  }).required()`,
             `${modelName}DeleteOne`,
           )}`,
         );
@@ -441,12 +435,12 @@ export default class Transformer {
 
       if (deleteMany) {
         const imports = [
-          `import { ${modelName}WhereInputSchemaObject } from './objects/${modelName}WhereInput.schema'`,
+          `import { ${modelName}WhereInputObjectSchema } from './objects/${modelName}WhereInput.schema'`,
         ];
         await writeFileSafely(
           path.join(Transformer.outputPath, `schemas/${deleteMany}.schema.ts`),
           `${this.getImportsForSchemas(imports)}${this.addExportSchema(
-            `Yup.object({ where: Yup.object(${modelName}WhereInputSchemaObject)  }).required()`,
+            `Yup.object({ ${modelName}WhereInputObjectSchema  }).required()`,
             `${modelName}DeleteMany`,
           )}`,
         );
@@ -454,13 +448,13 @@ export default class Transformer {
 
       if (update) {
         const imports = [
-          `import { ${modelName}UpdateInputSchemaObject } from './objects/${modelName}UpdateInput.schema'`,
-          `import { ${modelName}WhereUniqueInputSchemaObject } from './objects/${modelName}WhereUniqueInput.schema'`,
+          `import { ${modelName}UpdateInputObjectSchema } from './objects/${modelName}UpdateInput.schema'`,
+          `import { ${modelName}WhereUniqueInputObjectSchema } from './objects/${modelName}WhereUniqueInput.schema'`,
         ];
         await writeFileSafely(
           path.join(Transformer.outputPath, `schemas/${update}.schema.ts`),
           `${this.getImportsForSchemas(imports)}${this.addExportSchema(
-            `Yup.object({ data: Yup.object(${modelName}UpdateInputSchemaObject), where: Yup.object(${modelName}WhereUniqueInputSchemaObject)  }).required()`,
+            `Yup.object({ data: ${modelName}UpdateInputObjectSchema, where: ${modelName}WhereUniqueInputObjectSchema  }).required()`,
             `${modelName}UpdateOne`,
           )}`,
         );
@@ -468,13 +462,13 @@ export default class Transformer {
 
       if (updateMany) {
         const imports = [
-          `import { ${modelName}UpdateManyMutationInputSchemaObject } from './objects/${modelName}UpdateManyMutationInput.schema'`,
-          `import { ${modelName}WhereInputSchemaObject } from './objects/${modelName}WhereInput.schema'`,
+          `import { ${modelName}UpdateManyMutationInputObjectSchema } from './objects/${modelName}UpdateManyMutationInput.schema'`,
+          `import { ${modelName}WhereInputObjectSchema } from './objects/${modelName}WhereInput.schema'`,
         ];
         await writeFileSafely(
           path.join(Transformer.outputPath, `schemas/${updateMany}.schema.ts`),
           `${this.getImportsForSchemas(imports)}${this.addExportSchema(
-            `Yup.object({ data: Yup.object(${modelName}UpdateManyMutationInputSchemaObject), where: Yup.object(${modelName}WhereInputSchemaObject)  }).required()`,
+            `Yup.object({ data: ${modelName}UpdateManyMutationInputObjectSchema, where: ${modelName}WhereInputObjectSchema  }).required()`,
             `${modelName}UpdateMany`,
           )}`,
         );
@@ -482,14 +476,14 @@ export default class Transformer {
 
       if (upsert) {
         const imports = [
-          `import { ${modelName}WhereUniqueInputSchemaObject } from './objects/${modelName}WhereUniqueInput.schema'`,
-          `import { ${modelName}CreateInputSchemaObject } from './objects/${modelName}CreateInput.schema'`,
-          `import { ${modelName}UpdateInputSchemaObject } from './objects/${modelName}UpdateInput.schema'`,
+          `import { ${modelName}WhereUniqueInputObjectSchema } from './objects/${modelName}WhereUniqueInput.schema'`,
+          `import { ${modelName}CreateInputObjectSchema } from './objects/${modelName}CreateInput.schema'`,
+          `import { ${modelName}UpdateInputObjectSchema } from './objects/${modelName}UpdateInput.schema'`,
         ];
         await writeFileSafely(
           path.join(Transformer.outputPath, `schemas/${upsert}.schema.ts`),
           `${this.getImportsForSchemas(imports)}${this.addExportSchema(
-            `Yup.object({ where: Yup.object(${modelName}WhereUniqueInputSchemaObject), data: Yup.object(${modelName}CreateInputSchemaObject), update: Yup.object(${modelName}UpdateInputSchemaObject)  }).required()`,
+            `Yup.object({ where: ${modelName}WhereUniqueInputObjectSchema, data: ${modelName}CreateInputObjectSchema, update: ${modelName}UpdateInputObjectSchema  }).required()`,
             `${modelName}Upsert`,
           )}`,
         );
@@ -497,14 +491,14 @@ export default class Transformer {
 
       if (aggregate) {
         const imports = [
-          `import { ${modelName}WhereInputSchemaObject } from './objects/${modelName}WhereInput.schema'`,
-          `import { ${modelName}OrderByWithRelationInputSchemaObject } from './objects/${modelName}OrderByWithRelationInput.schema'`,
-          `import { ${modelName}WhereUniqueInputSchemaObject } from './objects/${modelName}WhereUniqueInput.schema'`,
+          `import { ${modelName}WhereInputObjectSchema } from './objects/${modelName}WhereInput.schema'`,
+          `import { ${modelName}OrderByWithRelationInputObjectSchema } from './objects/${modelName}OrderByWithRelationInput.schema'`,
+          `import { ${modelName}WhereUniqueInputObjectSchema } from './objects/${modelName}WhereUniqueInput.schema'`,
         ];
         await writeFileSafely(
           path.join(Transformer.outputPath, `schemas/${aggregate}.schema.ts`),
           `${this.getImportsForSchemas(imports)}${this.addExportSchema(
-            `Yup.object({ where: Yup.object(${modelName}WhereInputSchemaObject), orderBy: Yup.object(${modelName}OrderByWithRelationInputSchemaObject), cursor: Yup.object(${modelName}WhereUniqueInputSchemaObject), take: Yup.number(), skip: Yup.number()  }).required()`,
+            `Yup.object({ where: ${modelName}WhereInputObjectSchema, orderBy: ${modelName}OrderByWithRelationInputObjectSchema, cursor: ${modelName}WhereUniqueInputObjectSchema, take: Yup.number(), skip: Yup.number()  }).required()`,
             `${modelName}Aggregate`,
           )}`,
         );
@@ -512,15 +506,15 @@ export default class Transformer {
 
       if (groupBy) {
         const imports = [
-          `import { ${modelName}WhereInputSchemaObject } from './objects/${modelName}WhereInput.schema'`,
-          `import { ${modelName}OrderByWithAggregationInputSchemaObject } from './objects/${modelName}OrderByWithAggregationInput.schema'`,
-          `import { ${modelName}ScalarWhereWithAggregatesInputSchemaObject } from './objects/${modelName}ScalarWhereWithAggregatesInput.schema'`,
+          `import { ${modelName}WhereInputObjectSchema } from './objects/${modelName}WhereInput.schema'`,
+          `import { ${modelName}OrderByWithAggregationInputObjectSchema } from './objects/${modelName}OrderByWithAggregationInput.schema'`,
+          `import { ${modelName}ScalarWhereWithAggregatesInputObjectSchema } from './objects/${modelName}ScalarWhereWithAggregatesInput.schema'`,
           `import { ${modelName}ScalarFieldEnumSchema } from './enums/${modelName}ScalarFieldEnum.schema'`,
         ];
         await writeFileSafely(
           path.join(Transformer.outputPath, `schemas/${groupBy}.schema.ts`),
           `${this.getImportsForSchemas(imports)}${this.addExportSchema(
-            `Yup.object({ where: Yup.object(${modelName}WhereInputSchemaObject), orderBy: Yup.object(${modelName}OrderByWithAggregationInputSchemaObject), having: Yup.object(${modelName}ScalarWhereWithAggregatesInputSchemaObject), take: Yup.number(), skip: Yup.number(), by: Yup.array().of(${modelName}ScalarFieldEnumSchema).required()  }).required()`,
+            `Yup.object({ where: ${modelName}WhereInputObjectSchema, orderBy: ${modelName}OrderByWithAggregationInputObjectSchema, having: ${modelName}ScalarWhereWithAggregatesInputObjectSchema, take: Yup.number(), skip: Yup.number(), by: Yup.array().of(${modelName}ScalarFieldEnumSchema).required()  }).required()`,
             `${modelName}GroupBy`,
           )}`,
         );
