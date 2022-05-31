@@ -48,5 +48,9 @@ export async function generate(options: GeneratorOptions) {
   const obj = new Transformer({
     modelOperations: prismaClientDmmf.mappings.modelOperations,
   });
+
   await obj.printModelSchemas();
+  await obj.printIndex("SCHEMAS");
+  await obj.printIndex("SCHEMA_OBJECTS");
+  await obj.printIndex("SCHEMA_ENUMS");
 }

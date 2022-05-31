@@ -9,6 +9,9 @@ export default class Transformer {
   modelOperations?: PrismaDMMF.ModelMapping[];
   enumTypes?: PrismaDMMF.SchemaEnum[];
   static enumNames: Array<string> = [];
+  static generatedSchemaFiles: Array<string> = [];
+  static generatedSchemaObjectFiles: Array<string> = [];
+  static generatedSchemaEnumFiles: Array<string> = [];
   private static outputPath?: string;
   constructor({
     name,
@@ -341,6 +344,7 @@ export default class Transformer {
       ),
       this.getFinalForm(yupStringFields as unknown as string),
     );
+    Transformer.generatedSchemaObjectFiles.push(`./${this.name}.schema`);
   }
 
   async printModelSchemas() {
@@ -361,7 +365,7 @@ export default class Transformer {
 
       if (findUnique) {
         const imports = [
-          `import { ${modelName}WhereUniqueInputObjectSchema } from './objects/${modelName}WhereUniqueInput.schema'`,
+          `import { ${modelName}WhereUniqueInputObjectSchema } from './objects'`,
         ];
         await writeFileSafely(
           path.join(Transformer.outputPath, `schemas/${findUnique}.schema.ts`),
@@ -370,14 +374,13 @@ export default class Transformer {
             `${modelName}FindUnique`,
           )}`,
         );
+        Transformer.generatedSchemaFiles.push(`./${findUnique}.schema`);
       }
 
       if (findFirst) {
         const imports = [
-          `import { ${modelName}WhereInputObjectSchema } from './objects/${modelName}WhereInput.schema'`,
-          `import { ${modelName}OrderByWithRelationInputObjectSchema } from './objects/${modelName}OrderByWithRelationInput.schema'`,
-          `import { ${modelName}WhereUniqueInputObjectSchema } from './objects/${modelName}WhereUniqueInput.schema'`,
-          `import { ${modelName}ScalarFieldEnumSchema } from './enums/${modelName}ScalarFieldEnum.schema'`,
+          `import { ${modelName}WhereInputObjectSchema, ${modelName}OrderByWithRelationInputObjectSchema, ${modelName}WhereUniqueInputObjectSchema } from './objects'`,
+          `import { ${modelName}ScalarFieldEnumSchema } from './enums'`,
         ];
         await writeFileSafely(
           path.join(Transformer.outputPath, `schemas/${findFirst}.schema.ts`),
@@ -386,14 +389,13 @@ export default class Transformer {
             `${modelName}FindFirst`,
           )}`,
         );
+        Transformer.generatedSchemaFiles.push(`./${findFirst}.schema`);
       }
 
       if (findMany) {
         const imports = [
-          `import { ${modelName}WhereInputObjectSchema } from './objects/${modelName}WhereInput.schema'`,
-          `import { ${modelName}OrderByWithRelationInputObjectSchema } from './objects/${modelName}OrderByWithRelationInput.schema'`,
-          `import { ${modelName}WhereUniqueInputObjectSchema } from './objects/${modelName}WhereUniqueInput.schema'`,
-          `import { ${modelName}ScalarFieldEnumSchema } from './enums/${modelName}ScalarFieldEnum.schema'`,
+          `import { ${modelName}WhereInputObjectSchema, ${modelName}OrderByWithRelationInputObjectSchema, ${modelName}WhereUniqueInputObjectSchema } from './objects'`,
+          `import { ${modelName}ScalarFieldEnumSchema } from './enums'`,
         ];
         await writeFileSafely(
           path.join(Transformer.outputPath, `schemas/${findMany}.schema.ts`),
@@ -402,11 +404,12 @@ export default class Transformer {
             `${modelName}FindMany`,
           )}`,
         );
+        Transformer.generatedSchemaFiles.push(`./${findMany}.schema`);
       }
 
       if (create) {
         const imports = [
-          `import { ${modelName}CreateInputObjectSchema } from './objects/${modelName}CreateInput.schema'`,
+          `import { ${modelName}CreateInputObjectSchema } from './objects'`,
         ];
         await writeFileSafely(
           path.join(Transformer.outputPath, `schemas/${create}.schema.ts`),
@@ -415,11 +418,12 @@ export default class Transformer {
             `${modelName}Create`,
           )}`,
         );
+        Transformer.generatedSchemaFiles.push(`./${create}.schema`);
       }
 
       if (model.delete) {
         const imports = [
-          `import { ${modelName}WhereUniqueInputObjectSchema } from './objects/${modelName}WhereUniqueInput.schema'`,
+          `import { ${modelName}WhereUniqueInputObjectSchema } from './objects'`,
         ];
         await writeFileSafely(
           path.join(
@@ -431,11 +435,12 @@ export default class Transformer {
             `${modelName}DeleteOne`,
           )}`,
         );
+        Transformer.generatedSchemaFiles.push(`./${model.delete}.schema`);
       }
 
       if (deleteMany) {
         const imports = [
-          `import { ${modelName}WhereInputObjectSchema } from './objects/${modelName}WhereInput.schema'`,
+          `import { ${modelName}WhereInputObjectSchema } from './objects'`,
         ];
         await writeFileSafely(
           path.join(Transformer.outputPath, `schemas/${deleteMany}.schema.ts`),
@@ -444,12 +449,12 @@ export default class Transformer {
             `${modelName}DeleteMany`,
           )}`,
         );
+        Transformer.generatedSchemaFiles.push(`./${deleteMany}.schema`);
       }
 
       if (update) {
         const imports = [
-          `import { ${modelName}UpdateInputObjectSchema } from './objects/${modelName}UpdateInput.schema'`,
-          `import { ${modelName}WhereUniqueInputObjectSchema } from './objects/${modelName}WhereUniqueInput.schema'`,
+          `import { ${modelName}UpdateInputObjectSchema, ${modelName}WhereUniqueInputObjectSchema } from './objects'`,
         ];
         await writeFileSafely(
           path.join(Transformer.outputPath, `schemas/${update}.schema.ts`),
@@ -458,12 +463,12 @@ export default class Transformer {
             `${modelName}UpdateOne`,
           )}`,
         );
+        Transformer.generatedSchemaFiles.push(`./${update}.schema`);
       }
 
       if (updateMany) {
         const imports = [
-          `import { ${modelName}UpdateManyMutationInputObjectSchema } from './objects/${modelName}UpdateManyMutationInput.schema'`,
-          `import { ${modelName}WhereInputObjectSchema } from './objects/${modelName}WhereInput.schema'`,
+          `import { ${modelName}UpdateManyMutationInputObjectSchema, ${modelName}WhereInputObjectSchema } from './objects'`,
         ];
         await writeFileSafely(
           path.join(Transformer.outputPath, `schemas/${updateMany}.schema.ts`),
@@ -472,13 +477,12 @@ export default class Transformer {
             `${modelName}UpdateMany`,
           )}`,
         );
+        Transformer.generatedSchemaFiles.push(`./${updateMany}.schema`);
       }
 
       if (upsert) {
         const imports = [
-          `import { ${modelName}WhereUniqueInputObjectSchema } from './objects/${modelName}WhereUniqueInput.schema'`,
-          `import { ${modelName}CreateInputObjectSchema } from './objects/${modelName}CreateInput.schema'`,
-          `import { ${modelName}UpdateInputObjectSchema } from './objects/${modelName}UpdateInput.schema'`,
+          `import { ${modelName}WhereUniqueInputObjectSchema, ${modelName}CreateInputObjectSchema, ${modelName}UpdateInputObjectSchema } from './objects'`,
         ];
         await writeFileSafely(
           path.join(Transformer.outputPath, `schemas/${upsert}.schema.ts`),
@@ -487,13 +491,12 @@ export default class Transformer {
             `${modelName}Upsert`,
           )}`,
         );
+        Transformer.generatedSchemaFiles.push(`./${upsert}.schema`);
       }
 
       if (aggregate) {
         const imports = [
-          `import { ${modelName}WhereInputObjectSchema } from './objects/${modelName}WhereInput.schema'`,
-          `import { ${modelName}OrderByWithRelationInputObjectSchema } from './objects/${modelName}OrderByWithRelationInput.schema'`,
-          `import { ${modelName}WhereUniqueInputObjectSchema } from './objects/${modelName}WhereUniqueInput.schema'`,
+          `import { ${modelName}WhereInputObjectSchema, ${modelName}OrderByWithRelationInputObjectSchema, ${modelName}WhereUniqueInputObjectSchema } from './objects'`,
         ];
         await writeFileSafely(
           path.join(Transformer.outputPath, `schemas/${aggregate}.schema.ts`),
@@ -502,14 +505,13 @@ export default class Transformer {
             `${modelName}Aggregate`,
           )}`,
         );
+        Transformer.generatedSchemaFiles.push(`./${aggregate}.schema`);
       }
 
       if (groupBy) {
         const imports = [
-          `import { ${modelName}WhereInputObjectSchema } from './objects/${modelName}WhereInput.schema'`,
-          `import { ${modelName}OrderByWithAggregationInputObjectSchema } from './objects/${modelName}OrderByWithAggregationInput.schema'`,
-          `import { ${modelName}ScalarWhereWithAggregatesInputObjectSchema } from './objects/${modelName}ScalarWhereWithAggregatesInput.schema'`,
-          `import { ${modelName}ScalarFieldEnumSchema } from './enums/${modelName}ScalarFieldEnum.schema'`,
+          `import { ${modelName}WhereInputObjectSchema, ${modelName}OrderByWithAggregationInputObjectSchema, ${modelName}ScalarWhereWithAggregatesInputObjectSchema } from './objects'`,
+          `import { ${modelName}ScalarFieldEnumSchema } from './enums'`,
         ];
         await writeFileSafely(
           path.join(Transformer.outputPath, `schemas/${groupBy}.schema.ts`),
@@ -518,6 +520,7 @@ export default class Transformer {
             `${modelName}GroupBy`,
           )}`,
         );
+        Transformer.generatedSchemaFiles.push(`./${groupBy}.schema`);
       }
     }
     await this.printHelpers();
@@ -534,7 +537,30 @@ export default class Transformer {
           `${name}`,
         )}`,
       );
+      Transformer.generatedSchemaEnumFiles.push(`./${name}.schema`);
     }
+  }
+
+  async printIndex(type: 'SCHEMAS' | 'SCHEMA_OBJECTS' | 'SCHEMA_ENUMS') {
+    const filesPaths =
+      type === 'SCHEMAS'
+        ? Transformer.generatedSchemaFiles
+        : type === 'SCHEMA_ENUMS'
+        ? Transformer.generatedSchemaEnumFiles
+        : Transformer.generatedSchemaObjectFiles;
+    const exports = filesPaths.map(
+      (schemaPath) => `export * from '${schemaPath}';`,
+    );
+
+    const outputPath = path.join(
+      Transformer.outputPath,
+      type === 'SCHEMAS'
+        ? `schemas/index.ts`
+        : type === 'SCHEMA_ENUMS'
+        ? `schemas/enums/index.ts`
+        : `schemas/objects/index.ts`,
+    );
+    await writeFileSafely(outputPath, `${exports.join('\r\n')}`);
   }
 
   async printHelpers() {
