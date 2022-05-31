@@ -8,6 +8,7 @@ export default class Transformer {
   schemaImports?: Set<string>;
   modelOperations?: PrismaDMMF.ModelMapping[];
   enumTypes?: PrismaDMMF.SchemaEnum[];
+  static enumNames: Array<string> = [];
   private static outputPath?: string;
   constructor({
     name,
@@ -43,7 +44,7 @@ export default class Transformer {
   getAllSchemaImports() {
     return [...(this.schemaImports ?? [])]
       .map((name) =>
-        name === 'SortOrder' || name === 'QueryMode'
+        Transformer.enumNames.includes(name)
           ? `import { ${name}Schema } from '../enums/${name}.schema';`
           : [
               `import { ${name}SchemaObject } from './${name}.schema';`,
@@ -67,7 +68,7 @@ export default class Transformer {
           }: Yup.array().of(${`Yup.lazy(() => ${inputType.type}ObjectSchema.default(undefined)`}))`;
         } else {
           return `  ${field.name}: ${
-            ['SortOrder', 'QueryMode'].includes(inputType.type as string)
+            Transformer.enumNames.includes(inputType.type as string)
               ? `${`${inputType.type}Schema`}`
               : `Yup.array().of(Yup.object().noUnknown().shape(${`${inputType.type}SchemaObject`}))`
           }`;
@@ -79,7 +80,7 @@ export default class Transformer {
           }: ${`Yup.lazy(() => ${inputType.type}ObjectSchema.default(undefined))`}`;
         } else {
           return `  ${field.name}: ${
-            ['SortOrder', 'QueryMode'].includes(inputType.type as string)
+            Transformer.enumNames.includes(inputType.type as string)
               ? `${`${inputType.type}Schema`}`
               : `Yup.object().noUnknown().shape(${`${inputType.type}SchemaObject`})`
           }`;
@@ -93,7 +94,7 @@ export default class Transformer {
           return `Yup.array().of(${`Yup.lazy(() => ${inputType.type}ObjectSchema.default(undefined)`}))`;
         } else {
           return `${
-            ['SortOrder', 'QueryMode'].includes(inputType.type as string)
+            Transformer.enumNames.includes(inputType.type as string)
               ? `${`${inputType.type}Schema`}`
               : `Yup.array().of(Yup.object().noUnknown().shape(${`${inputType.type}SchemaObject`}))`
           }`;
@@ -103,7 +104,7 @@ export default class Transformer {
           return `${`Yup.lazy(() => ${inputType.type}ObjectSchema.default(undefined))`}`;
         } else {
           return `${
-            ['SortOrder', 'QueryMode'].includes(inputType.type as string)
+            Transformer.enumNames.includes(inputType.type as string)
               ? `${`${inputType.type}Schema`}`
               : `Yup.object().noUnknown().shape(${`${inputType.type}SchemaObject`})`
           }`;
@@ -194,6 +195,12 @@ export default class Transformer {
               }
               result.push(
                 this.getPrismaStringLine(field, inputType, inputsLength),
+              );
+            } else if (inputType.type === 'Json') {
+              result.push(
+                inputType.isList
+                  ? 'Yup.array().of(Yup.mixed())'
+                  : 'Yup.mixed()',
               );
             }
           }
