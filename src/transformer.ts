@@ -12,6 +12,7 @@ export default class Transformer {
   static generatedSchemaFiles: Array<string> = [];
   static generatedSchemaObjectFiles: Array<string> = [];
   static generatedSchemaEnumFiles: Array<string> = [];
+  static internals: Array<string> = [];
   private static outputPath?: string;
   constructor({
     name,
@@ -48,8 +49,8 @@ export default class Transformer {
     return [...(this.schemaImports ?? [])]
       .map((name) =>
         Transformer.enumNames.includes(name)
-          ? `import { ${name}Schema } from '../enums/${name}.schema';`
-          : [`import { ${name}ObjectSchema } from './${name}.schema';`],
+          ? `import { ${name}Schema } from '../internals';`
+          : [`import { ${name}ObjectSchema } from '../internals';`],
       )
       .flatMap((item) => item)
       .join(';\r\n');
@@ -345,6 +346,7 @@ export default class Transformer {
       this.getFinalForm(yupStringFields as unknown as string),
     );
     Transformer.generatedSchemaObjectFiles.push(`./${this.name}.schema`);
+    Transformer.internals.push(`./objects/${this.name}.schema`);
   }
 
   async printModelSchemas() {
@@ -365,7 +367,7 @@ export default class Transformer {
 
       if (findUnique) {
         const imports = [
-          `import { ${modelName}WhereUniqueInputObjectSchema } from './objects'`,
+          `import { ${modelName}WhereUniqueInputObjectSchema } from './internals'`,
         ];
         await writeFileSafely(
           path.join(Transformer.outputPath, `schemas/${findUnique}.schema.ts`),
@@ -379,8 +381,8 @@ export default class Transformer {
 
       if (findFirst) {
         const imports = [
-          `import { ${modelName}WhereInputObjectSchema, ${modelName}OrderByWithRelationInputObjectSchema, ${modelName}WhereUniqueInputObjectSchema } from './objects'`,
-          `import { ${modelName}ScalarFieldEnumSchema } from './enums'`,
+          `import { ${modelName}WhereInputObjectSchema, ${modelName}OrderByWithRelationInputObjectSchema, ${modelName}WhereUniqueInputObjectSchema } from './internals'`,
+          `import { ${modelName}ScalarFieldEnumSchema } from './internals'`,
         ];
         await writeFileSafely(
           path.join(Transformer.outputPath, `schemas/${findFirst}.schema.ts`),
@@ -394,8 +396,8 @@ export default class Transformer {
 
       if (findMany) {
         const imports = [
-          `import { ${modelName}WhereInputObjectSchema, ${modelName}OrderByWithRelationInputObjectSchema, ${modelName}WhereUniqueInputObjectSchema } from './objects'`,
-          `import { ${modelName}ScalarFieldEnumSchema } from './enums'`,
+          `import { ${modelName}WhereInputObjectSchema, ${modelName}OrderByWithRelationInputObjectSchema, ${modelName}WhereUniqueInputObjectSchema } from './internals'`,
+          `import { ${modelName}ScalarFieldEnumSchema } from './internals'`,
         ];
         await writeFileSafely(
           path.join(Transformer.outputPath, `schemas/${findMany}.schema.ts`),
@@ -409,7 +411,7 @@ export default class Transformer {
 
       if (create) {
         const imports = [
-          `import { ${modelName}CreateInputObjectSchema } from './objects'`,
+          `import { ${modelName}CreateInputObjectSchema } from './internals'`,
         ];
         await writeFileSafely(
           path.join(Transformer.outputPath, `schemas/${create}.schema.ts`),
@@ -423,7 +425,7 @@ export default class Transformer {
 
       if (model.delete) {
         const imports = [
-          `import { ${modelName}WhereUniqueInputObjectSchema } from './objects'`,
+          `import { ${modelName}WhereUniqueInputObjectSchema } from './internals'`,
         ];
         await writeFileSafely(
           path.join(
@@ -440,7 +442,7 @@ export default class Transformer {
 
       if (deleteMany) {
         const imports = [
-          `import { ${modelName}WhereInputObjectSchema } from './objects'`,
+          `import { ${modelName}WhereInputObjectSchema } from './internals'`,
         ];
         await writeFileSafely(
           path.join(Transformer.outputPath, `schemas/${deleteMany}.schema.ts`),
@@ -454,7 +456,7 @@ export default class Transformer {
 
       if (update) {
         const imports = [
-          `import { ${modelName}UpdateInputObjectSchema, ${modelName}WhereUniqueInputObjectSchema } from './objects'`,
+          `import { ${modelName}UpdateInputObjectSchema, ${modelName}WhereUniqueInputObjectSchema } from './internals'`,
         ];
         await writeFileSafely(
           path.join(Transformer.outputPath, `schemas/${update}.schema.ts`),
@@ -468,7 +470,7 @@ export default class Transformer {
 
       if (updateMany) {
         const imports = [
-          `import { ${modelName}UpdateManyMutationInputObjectSchema, ${modelName}WhereInputObjectSchema } from './objects'`,
+          `import { ${modelName}UpdateManyMutationInputObjectSchema, ${modelName}WhereInputObjectSchema } from './internals'`,
         ];
         await writeFileSafely(
           path.join(Transformer.outputPath, `schemas/${updateMany}.schema.ts`),
@@ -482,7 +484,7 @@ export default class Transformer {
 
       if (upsert) {
         const imports = [
-          `import { ${modelName}WhereUniqueInputObjectSchema, ${modelName}CreateInputObjectSchema, ${modelName}UpdateInputObjectSchema } from './objects'`,
+          `import { ${modelName}WhereUniqueInputObjectSchema, ${modelName}CreateInputObjectSchema, ${modelName}UpdateInputObjectSchema } from './internals'`,
         ];
         await writeFileSafely(
           path.join(Transformer.outputPath, `schemas/${upsert}.schema.ts`),
@@ -496,7 +498,7 @@ export default class Transformer {
 
       if (aggregate) {
         const imports = [
-          `import { ${modelName}WhereInputObjectSchema, ${modelName}OrderByWithRelationInputObjectSchema, ${modelName}WhereUniqueInputObjectSchema } from './objects'`,
+          `import { ${modelName}WhereInputObjectSchema, ${modelName}OrderByWithRelationInputObjectSchema, ${modelName}WhereUniqueInputObjectSchema } from './internals'`,
         ];
         await writeFileSafely(
           path.join(Transformer.outputPath, `schemas/${aggregate}.schema.ts`),
@@ -510,8 +512,8 @@ export default class Transformer {
 
       if (groupBy) {
         const imports = [
-          `import { ${modelName}WhereInputObjectSchema, ${modelName}OrderByWithAggregationInputObjectSchema, ${modelName}ScalarWhereWithAggregatesInputObjectSchema } from './objects'`,
-          `import { ${modelName}ScalarFieldEnumSchema } from './enums'`,
+          `import { ${modelName}WhereInputObjectSchema, ${modelName}OrderByWithAggregationInputObjectSchema, ${modelName}ScalarWhereWithAggregatesInputObjectSchema } from './internals'`,
+          `import { ${modelName}ScalarFieldEnumSchema } from './internals'`,
         ];
         await writeFileSafely(
           path.join(Transformer.outputPath, `schemas/${groupBy}.schema.ts`),
@@ -538,6 +540,7 @@ export default class Transformer {
         )}`,
       );
       Transformer.generatedSchemaEnumFiles.push(`./${name}.schema`);
+      Transformer.internals.push(`./enums/${name}.schema`);
     }
   }
 
@@ -559,6 +562,55 @@ export default class Transformer {
         : type === 'SCHEMA_ENUMS'
         ? `schemas/enums/index.ts`
         : `schemas/objects/index.ts`,
+    );
+    await writeFileSafely(outputPath, `${exports.join('\r\n')}`);
+  }
+
+  async printInternals() {
+    let lastNestedIndex = -1;
+    let itemsToMoveUp: Array<Array<string>> = [];
+    const filesPaths = Transformer.internals.filter((item, i) => {
+      if (item.includes('/objects/Nested')) {
+        lastNestedIndex = i;
+      }
+      if (item.includes('Envelope')) {
+        itemsToMoveUp.push([item]);
+        return false;
+      }
+      return true;
+    });
+
+    itemsToMoveUp = itemsToMoveUp.map((item) => {
+      const singleItem = item[0];
+      const itemWithoutEnvelope = singleItem.replace('Envelope', '');
+      const indexOfItem = filesPaths.indexOf(itemWithoutEnvelope);
+      if (indexOfItem > -1) {
+        const itemWithEnvelope = filesPaths[indexOfItem];
+        filesPaths.splice(indexOfItem, 1);
+        return [singleItem, itemWithEnvelope];
+      }
+      return item;
+    });
+
+    const itemsUptoNested = filesPaths.slice(0, lastNestedIndex + 1);
+    const itemsAfterNested = filesPaths.slice(lastNestedIndex);
+
+    let finalItems = itemsToMoveUp
+      .map(([envelope, item]) => {
+        return [item, envelope];
+      })
+      .flatMap((item) => item);
+
+    finalItems = finalItems.concat(itemsAfterNested);
+    finalItems = finalItems.concat(itemsUptoNested);
+
+    const exports = finalItems.map(
+      (schemaPath) => `export * from '${schemaPath}';`,
+    );
+
+    const outputPath = path.join(
+      Transformer.outputPath,
+      'schemas/internals.ts',
     );
     await writeFileSafely(outputPath, `${exports.join('\r\n')}`);
   }
