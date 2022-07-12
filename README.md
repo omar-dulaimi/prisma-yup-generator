@@ -15,9 +15,20 @@ Automatically generate [Yup](https://github.com/jquense/yup) schemas from your [
 
 ## Table of Contents
 
+- [Supported Prisma Versions](#supported-prisma-versions)
 - [Installation](#installing)
 - [Usage](#usage)
 - [Additional Options](#additional-options)
+
+# Supported Prisma Versions
+
+### Prisma 4
+
+- 0.2.0 and higher
+
+### Prisma 2/3
+
+- 0.1.5 and lower
 
 ## Installation
 
@@ -35,7 +46,7 @@ Using yarn:
 
 # Usage
 
-1- Star this repo 😉 
+1- Star this repo 😉
 
 2- Add the generator to your Prisma schema
 
