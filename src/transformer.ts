@@ -1,4 +1,4 @@
-import { DMMF as PrismaDMMF } from '@prisma/client/runtime';
+import type { DMMF as PrismaDMMF } from '@prisma/generator-helper';
 import path from 'path';
 import { writeFileSafely } from './utils/writeFileSafely';
 
@@ -356,11 +356,16 @@ export default class Transformer {
         findUnique,
         findFirst,
         findMany,
-        create,
-        update,
+        // @ts-ignore
+        createOne,
+        // @ts-ignore
+        deleteOne,
+        // @ts-ignore
+        updateOne,
         deleteMany,
         updateMany,
-        upsert,
+        // @ts-ignore
+        upsertOne,
         aggregate,
         groupBy,
       } = model;
@@ -409,35 +414,35 @@ export default class Transformer {
         Transformer.generatedSchemaFiles.push(`./${findMany}.schema`);
       }
 
-      if (create) {
+      if (createOne) {
         const imports = [
           `import { ${modelName}CreateInputObjectSchema } from './internals'`,
         ];
         await writeFileSafely(
-          path.join(Transformer.outputPath, `schemas/${create}.schema.ts`),
+          path.join(Transformer.outputPath, `schemas/${createOne}.schema.ts`),
           `${this.getImportsForSchemas(imports)}${this.addExportSchema(
             `Yup.object({ data: ${modelName}CreateInputObjectSchema  }).required()`,
             `${modelName}Create`,
           )}`,
         );
-        Transformer.generatedSchemaFiles.push(`./${create}.schema`);
+        Transformer.generatedSchemaFiles.push(`./${createOne}.schema`);
       }
 
-      if (model.delete) {
+      if (deleteOne) {
         const imports = [
           `import { ${modelName}WhereUniqueInputObjectSchema } from './internals'`,
         ];
         await writeFileSafely(
           path.join(
             Transformer.outputPath,
-            `schemas/${model.delete}.schema.ts`,
+            `schemas/${deleteOne}.schema.ts`,
           ),
           `${this.getImportsForSchemas(imports)}${this.addExportSchema(
             `Yup.object({ where: ${modelName}WhereUniqueInputObjectSchema  }).required()`,
             `${modelName}DeleteOne`,
           )}`,
         );
-        Transformer.generatedSchemaFiles.push(`./${model.delete}.schema`);
+        Transformer.generatedSchemaFiles.push(`./${deleteOne}.schema`);
       }
 
       if (deleteMany) {
@@ -454,18 +459,18 @@ export default class Transformer {
         Transformer.generatedSchemaFiles.push(`./${deleteMany}.schema`);
       }
 
-      if (update) {
+      if (updateOne) {
         const imports = [
           `import { ${modelName}UpdateInputObjectSchema, ${modelName}WhereUniqueInputObjectSchema } from './internals'`,
         ];
         await writeFileSafely(
-          path.join(Transformer.outputPath, `schemas/${update}.schema.ts`),
+          path.join(Transformer.outputPath, `schemas/${updateOne}.schema.ts`),
           `${this.getImportsForSchemas(imports)}${this.addExportSchema(
             `Yup.object({ data: ${modelName}UpdateInputObjectSchema, where: ${modelName}WhereUniqueInputObjectSchema  }).required()`,
             `${modelName}UpdateOne`,
           )}`,
         );
-        Transformer.generatedSchemaFiles.push(`./${update}.schema`);
+        Transformer.generatedSchemaFiles.push(`./${updateOne}.schema`);
       }
 
       if (updateMany) {
@@ -482,18 +487,18 @@ export default class Transformer {
         Transformer.generatedSchemaFiles.push(`./${updateMany}.schema`);
       }
 
-      if (upsert) {
+      if (upsertOne) {
         const imports = [
           `import { ${modelName}WhereUniqueInputObjectSchema, ${modelName}CreateInputObjectSchema, ${modelName}UpdateInputObjectSchema } from './internals'`,
         ];
         await writeFileSafely(
-          path.join(Transformer.outputPath, `schemas/${upsert}.schema.ts`),
+          path.join(Transformer.outputPath, `schemas/${upsertOne}.schema.ts`),
           `${this.getImportsForSchemas(imports)}${this.addExportSchema(
             `Yup.object({ where: ${modelName}WhereUniqueInputObjectSchema, data: ${modelName}CreateInputObjectSchema, update: ${modelName}UpdateInputObjectSchema  }).required()`,
             `${modelName}Upsert`,
           )}`,
         );
-        Transformer.generatedSchemaFiles.push(`./${upsert}.schema`);
+        Transformer.generatedSchemaFiles.push(`./${upsertOne}.schema`);
       }
 
       if (aggregate) {
