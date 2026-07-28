@@ -141,10 +141,24 @@ function runPrismaGenerate() {
     return false;
   }
 
+  // Prisma resolves a generator `provider` that is not a path by running it as a command,
+  // so the provider has to be on PATH. A real consumer gets that from `npx prisma generate`,
+  // which prepends the project's node_modules/.bin. Spawning the CLI through `process.execPath`
+  // does not. The packaged-artifact job is the only caller that passes a bare package name,
+  // and it failed every single run with `/bin/sh: 1: prisma-yup-generator: not found`, which
+  // the early return below then swallowed. Resolve the provider the way the consumer does.
+  const binDir = path.join(projectRoot, 'node_modules', '.bin');
   const result = spawnSync(
     process.execPath,
     [cliPath, 'generate', '--schema', schemaPath],
-    { cwd: projectRoot, encoding: 'utf8' },
+    {
+      cwd: projectRoot,
+      encoding: 'utf8',
+      env: {
+        ...process.env,
+        PATH: `${binDir}${path.delimiter}${process.env.PATH || ''}`,
+      },
+    },
   );
 
   if (result.status !== 0) {
@@ -177,95 +191,112 @@ async function expect(label, schema, value, wanted, why) {
   failures.push(`${label}: expected ${wanted}, got ${got}. ${why}`);
 }
 
+/**
+ * The checks themselves, deliberately in their own function rather than inline in the runner
+ * below.
+ *
+ * They return early on the paths where there is nothing further to check, and those returns
+ * used to sit inside the runner's `try`. A `return` there ran `finally`, skipped the block
+ * that prints `failures` and calls `process.exit(1)`, resolved the promise with nothing
+ * pending, and Node exited 0. So the gate reported success while discarding every message
+ * pushed into `failures` on the way out. Returning from this function only ends the checks;
+ * the caller still reports them.
+ */
+async function runChecks() {
+  if (!runPrismaGenerate()) return;
+
+  const objectsIndex = path.join(
+    workDir,
+    'prisma',
+    'generated',
+    'schemas',
+    'objects',
+    'index.ts',
+  );
+  if (!fs.existsSync(objectsIndex)) {
+    failures.push(
+      `the generator produced no object schemas for the enum schema (expected ${objectsIndex})`,
+    );
+    return;
+  }
+
+  const objects = require(objectsIndex);
+
+  // --- 1. the enum fields exist at all -----------------------------------
+  const expectedFields = [
+    ['UserCreateInputObjectSchema', 'role'],
+    ['PostCreateInputObjectSchema', 'status'],
+    ['UserUncheckedCreateInputObjectSchema', 'role'],
+  ];
+  for (const [schemaName, fieldName] of expectedFields) {
+    const schema = objects[schemaName];
+    if (!isSchema(schema)) {
+      failures.push(`${schemaName} is not exported from the emitted output`);
+      continue;
+    }
+    const keys = Object.keys(schema.fields || {});
+    if (keys.includes(fieldName)) continue;
+    failures.push(
+      `${schemaName} has no '${fieldName}' key, so a field typed as a user-defined enum ` +
+        `was dropped from the emitted shape. yup ignores keys a shape does not mention, ` +
+        `so that value goes unvalidated. Emitted keys: ${
+          keys.join(', ') || '(none)'
+        }`,
+    );
+  }
+
+  // --- 2. the enum is actually enforced ----------------------------------
+  const userCreate = objects.UserCreateInputObjectSchema;
+  if (isSchema(userCreate)) {
+    await expect(
+      "UserCreateInput with role 'ADMIN'",
+      userCreate,
+      { email: 'a@b.c', role: 'ADMIN' },
+      'accepted',
+      'ADMIN is a declared value of the Role enum.',
+    );
+    await expect(
+      "UserCreateInput with role 'NOT_A_REAL_ROLE'",
+      userCreate,
+      { email: 'a@b.c', role: 'NOT_A_REAL_ROLE' },
+      'rejected',
+      'This is the silent under-validation: an undeclared enum value must not pass.',
+    );
+  }
+
+  // --- 3. list positions hold a list -------------------------------------
+  // `where: { role: { in: ['USER'] } }` is ordinary Prisma. Enums used to be exempted
+  // from the array wrapper, so the bare enum saw an array and rejected it.
+  const roleFilter = objects.EnumRoleFilterObjectSchema;
+  if (isSchema(roleFilter)) {
+    await expect(
+      "EnumRoleFilter with in: ['USER']",
+      roleFilter,
+      { in: ['USER'] },
+      'accepted',
+      'A list of enum values is what Prisma sends for `in`.',
+    );
+    await expect(
+      "EnumRoleFilter with in: ['NOPE']",
+      roleFilter,
+      { in: ['NOPE'] },
+      'rejected',
+      'The array wrapper must still check what is inside it.',
+    );
+  } else {
+    failures.push(
+      'EnumRoleFilterObjectSchema is not exported from the emitted output',
+    );
+  }
+}
+
 (async () => {
   fs.rmSync(workDir, { recursive: true, force: true });
   fs.mkdirSync(path.join(workDir, 'prisma'), { recursive: true });
   fs.writeFileSync(schemaPath, SCHEMA);
 
   try {
-    if (!runPrismaGenerate()) return;
-
-    const objectsIndex = path.join(
-      workDir,
-      'prisma',
-      'generated',
-      'schemas',
-      'objects',
-      'index.ts',
-    );
-    if (!fs.existsSync(objectsIndex)) {
-      failures.push(
-        `the generator produced no object schemas for the enum schema (expected ${objectsIndex})`,
-      );
-      return;
-    }
-
-    const objects = require(objectsIndex);
-
-    // --- 1. the enum fields exist at all -----------------------------------
-    const expectedFields = [
-      ['UserCreateInputObjectSchema', 'role'],
-      ['PostCreateInputObjectSchema', 'status'],
-      ['UserUncheckedCreateInputObjectSchema', 'role'],
-    ];
-    for (const [schemaName, fieldName] of expectedFields) {
-      const schema = objects[schemaName];
-      if (!isSchema(schema)) {
-        failures.push(`${schemaName} is not exported from the emitted output`);
-        continue;
-      }
-      const keys = Object.keys(schema.fields || {});
-      if (keys.includes(fieldName)) continue;
-      failures.push(
-        `${schemaName} has no '${fieldName}' key, so a field typed as a user-defined enum ` +
-          `was dropped from the emitted shape. yup ignores keys a shape does not mention, ` +
-          `so that value goes unvalidated. Emitted keys: ${keys.join(', ') || '(none)'}`,
-      );
-    }
-
-    // --- 2. the enum is actually enforced ----------------------------------
-    const userCreate = objects.UserCreateInputObjectSchema;
-    if (isSchema(userCreate)) {
-      await expect(
-        "UserCreateInput with role 'ADMIN'",
-        userCreate,
-        { email: 'a@b.c', role: 'ADMIN' },
-        'accepted',
-        'ADMIN is a declared value of the Role enum.',
-      );
-      await expect(
-        "UserCreateInput with role 'NOT_A_REAL_ROLE'",
-        userCreate,
-        { email: 'a@b.c', role: 'NOT_A_REAL_ROLE' },
-        'rejected',
-        'This is the silent under-validation: an undeclared enum value must not pass.',
-      );
-    }
-
-    // --- 3. list positions hold a list -------------------------------------
-    // `where: { role: { in: ['USER'] } }` is ordinary Prisma. Enums used to be exempted
-    // from the array wrapper, so the bare enum saw an array and rejected it.
-    const roleFilter = objects.EnumRoleFilterObjectSchema;
-    if (isSchema(roleFilter)) {
-      await expect(
-        "EnumRoleFilter with in: ['USER']",
-        roleFilter,
-        { in: ['USER'] },
-        'accepted',
-        'A list of enum values is what Prisma sends for `in`.',
-      );
-      await expect(
-        "EnumRoleFilter with in: ['NOPE']",
-        roleFilter,
-        { in: ['NOPE'] },
-        'rejected',
-        'The array wrapper must still check what is inside it.',
-      );
-    } else {
-      failures.push(
-        'EnumRoleFilterObjectSchema is not exported from the emitted output',
-      );
-    }
+    await runChecks();
   } finally {
     fs.rmSync(workDir, { recursive: true, force: true });
     fs.rmSync(path.join(projectRoot, 'client'), {
