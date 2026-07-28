@@ -478,7 +478,7 @@ export default class Transformer {
         await writeFileSafely(
           path.join(Transformer.outputPath, `schemas/${deleteMany}.schema.ts`),
           `${this.getImportsForSchemas(imports)}${this.addExportSchema(
-            `Yup.object({ ${modelName}WhereInputObjectSchema  }).required()`,
+            `Yup.object({ where: ${modelName}WhereInputObjectSchema  }).required()`,
             `${modelName}DeleteMany`,
           )}`,
         );

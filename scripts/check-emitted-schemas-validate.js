@@ -188,6 +188,42 @@ const isSchema = (value) =>
   }
 
   // -------------------------------------------------------------------------
+  // 3b. No schema may have a key named after a schema.
+  //
+  //     `deleteMany` was emitted as `Yup.object({ PostWhereInputObjectSchema })`
+  //     instead of `Yup.object({ where: PostWhereInputObjectSchema })`. Object
+  //     shorthand made that a valid program with a key called
+  //     "PostWhereInputObjectSchema", so nothing anywhere complained.
+  //
+  //     Passes 1-3 could not see it. A wrongly named key is not a crash: yup
+  //     ignores keys a shape does not mention, so `where` went unvalidated,
+  //     `PostDeleteManySchema.validate({})` resolved to
+  //     `{ PostWhereInputObjectSchema: {} }`, and feeding that to
+  //     `prisma.post.deleteMany` fails on an argument Prisma has never heard of.
+  //
+  //     A field named like a schema identifier is always this slip, so the whole
+  //     class is cheap to trap by name.
+  // -------------------------------------------------------------------------
+  const looksLikeSchemaIdentifier = /(?:Object)?Schema$/;
+  for (const [source, exports] of [
+    ['emitted index', entry],
+    ['emitted objects', objects],
+  ]) {
+    for (const [name, schema] of Object.entries(exports)) {
+      if (!isSchema(schema)) continue;
+      for (const key of Object.keys(schema.fields || {})) {
+        if (!looksLikeSchemaIdentifier.test(key)) continue;
+        failures.push(
+          `${source}: ${name} has a field called '${key}', which is a schema name rather ` +
+            'than an argument name. This is object shorthand written where `argument: Schema` ' +
+            'was meant, so the real argument is not validated at all and a key Prisma does ' +
+            'not accept is added to the validated value.',
+        );
+      }
+    }
+  }
+
+  // -------------------------------------------------------------------------
   // 4. The same schemas, compiled to JavaScript and required as JavaScript.
   //
   //    Passes 1-3 load the emitted `.ts` files through the hook installed at the
