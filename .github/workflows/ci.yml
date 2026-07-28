@@ -64,6 +64,16 @@ jobs:
         # example. It does not typecheck the emitted schemas: see the note on this job.
         run: node scripts/check-readme-example.js
 
+      - name: Check that the emitted schemas validate instead of crashing
+        # The README example only ever validated a value with every documented key present,
+        # so it never took the path where yup computes a field's default. On that path the
+        # schemas threw `TypeError: Cannot use 'in' operator to search for 'default' in
+        # undefined` from yup's internals, which meant `PostCreateSchema.validate({})` was
+        # a crash rather than a validation error. This runs the emitted schemas with keys
+        # absent and with keys present, and fails on any throw that is not a
+        # ValidationError. It does not typecheck them: see the note on this job.
+        run: node scripts/check-emitted-schemas-validate.js
+
   # Verifies the artefact that users actually get, which is not the working tree. This repo
   # publishes a curated directory assembled by package.sh, so the working tree passing tells
   # you nothing about whether the tarball has the files in it, whether `bin` resolves after a
@@ -171,3 +181,8 @@ jobs:
       # is the copy a user would actually have.
       - name: Check the README's example against the installed package's output
         run: node scripts/check-readme-example.js "$RUNNER_TEMP/consumer"
+
+      # Same reason: the crash only shows up when the emitted schemas are executed, and the
+      # copy that matters is the one produced by the installed package, not the working tree.
+      - name: Check that the installed package's schemas validate instead of crashing
+        run: node scripts/check-emitted-schemas-validate.js "$RUNNER_TEMP/consumer"

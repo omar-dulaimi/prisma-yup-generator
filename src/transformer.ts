@@ -56,63 +56,51 @@ export default class Transformer {
       .join(';\r\n');
   }
 
+  /**
+   * A reference to another generated schema, deferred until validation time.
+   *
+   * Every generated module imports its references from `internals.ts`, and `internals.ts`
+   * re-exports them in one fixed order, so a module that evaluates before the module it
+   * references reads `undefined`. Reading the reference eagerly put that `undefined` into
+   * the yup shape, and yup then threw `TypeError: Cannot use 'in' operator to search for
+   * 'default' in undefined` the first time a key was absent from the validated value.
+   *
+   * Ordering `internals.ts` differently cannot fix that. Prisma's input types are
+   * genuinely cyclic (PostListRelationFilter -> PostWhereInput -> UserRelationFilter ->
+   * UserWhereInput -> PostListRelationFilter), so no order exists in which every reference
+   * is already defined, and wiring a cycle up eagerly makes yup's `getDefaultFromShape`
+   * recurse until the stack overflows.
+   *
+   * `Yup.lazy` reads the reference when the schema is used instead, by which point every
+   * module has finished evaluating. `.default(undefined)` is what stops the recursion: yup
+   * computes an object schema's default from its shape unless a default is set, so without
+   * it a cycle still overflows the stack.
+   */
+  static deferredSchemaReference(type: string) {
+    const schemaName = Transformer.enumNames.includes(type)
+      ? `${type}Schema`
+      : `${type}ObjectSchema`;
+    return `Yup.lazy(() => ${schemaName}.default(undefined))`;
+  }
+
   getPrismaStringLine(
     field: PrismaDMMF.SchemaArg,
     inputType: PrismaDMMF.SchemaArgInputType,
     inputsLength: number,
   ) {
-    if (inputsLength === 1) {
-      if (inputType.isList) {
-        if (inputType.type === this.name) {
-          return `  ${
-            field.name
-          }: Yup.array().of(${`Yup.lazy(() => ${inputType.type}ObjectSchema.default(undefined)`}))`;
-        } else {
-          return `  ${field.name}: ${
-            Transformer.enumNames.includes(inputType.type as string)
-              ? `${`${inputType.type}Schema`}`
-              : `Yup.array().of(${`${inputType.type}ObjectSchema`})`
-          }`;
-        }
-      } else {
-        if (inputType.type === this.name) {
-          return `  ${
-            field.name
-          }: ${`Yup.lazy(() => ${inputType.type}ObjectSchema.default(undefined))`}`;
-        } else {
-          return `  ${field.name}: ${
-            Transformer.enumNames.includes(inputType.type as string)
-              ? `${`${inputType.type}Schema`}`
-              : `${`${inputType.type}ObjectSchema`}`
-          }`;
-        }
-      }
-    }
+    if (inputsLength < 1) return '';
 
-    if (inputsLength > 1) {
-      if (inputType.isList) {
-        if (inputType.type === this.name) {
-          return `Yup.array().of(${`Yup.lazy(() => ${inputType.type}ObjectSchema.default(undefined)`}))`;
-        } else {
-          return `${
-            Transformer.enumNames.includes(inputType.type as string)
-              ? `${`${inputType.type}Schema`}`
-              : `Yup.array().of(${`${inputType.type}ObjectSchema`})`
-          }`;
-        }
-      } else {
-        if (inputType.type === this.name) {
-          return `${`Yup.lazy(() => ${inputType.type}ObjectSchema.default(undefined))`}`;
-        } else {
-          return `${
-            Transformer.enumNames.includes(inputType.type as string)
-              ? `${`${inputType.type}Schema`}`
-              : `${`${inputType.type}ObjectSchema`}`
-          }`;
-        }
-      }
-    }
-    return '';
+    const type = inputType.type as string;
+    const reference = Transformer.deferredSchemaReference(type);
+
+    // A list of enums is left unwrapped, as it always has been, so this change alters only
+    // when a reference is read and never what it accepts.
+    const yupType =
+      inputType.isList && !Transformer.enumNames.includes(type)
+        ? `Yup.array().of(${reference})`
+        : reference;
+
+    return inputsLength === 1 ? `  ${field.name}: ${yupType}` : yupType;
   }
 
   getSchemaObjectLine(field: PrismaDMMF.SchemaArg) {
