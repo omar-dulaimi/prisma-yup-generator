@@ -6,6 +6,12 @@ export default class Transformer {
   name?: string;
   fields?: PrismaDMMF.SchemaArg[];
   schemaImports?: Set<string>;
+  /**
+   * Whether this schema ended up using the `oneOfSchemas` helper, so that only the files
+   * that call it import it. Set while the fields are turned into yup lines, which happens
+   * before the imports are rendered.
+   */
+  usesOneOfSchemas = false;
   modelOperations?: PrismaDMMF.ModelMapping[];
   enumTypes?: PrismaDMMF.SchemaEnum[];
   static enumNames: Array<string> = [];
@@ -199,11 +205,10 @@ export default class Transformer {
       );
 
       if (alternatives.length > 0) {
+        this.usesOneOfSchemas = true;
         lines = [
           [
-            `  ${field.name}: Yup.mixed().oneOfSchemas([${alternatives.join(
-              ',\r\n',
-            )}])`,
+            `  ${field.name}: oneOfSchemas([${alternatives.join(',\r\n')}])`,
             field,
             true,
           ],
@@ -298,8 +303,19 @@ export default class Transformer {
     return imports;
   }
 
+  /**
+   * Imports the `oneOfSchemas` helper, and only into the files that call it.
+   *
+   * The specifier deliberately carries no `.ts` extension. It used to, and it was a
+   * side-effect-only import, so `tsc` turned it into `require('../helpers/oneOfSchemas.helper.ts')`
+   * in the compiled JavaScript. No such file exists next to the compiled output, so anyone
+   * who built the emitted schemas got `Cannot find module` at run time. Only the checks that
+   * load the TypeScript sources directly ever passed.
+   */
   getHelpersImports() {
-    let imports = 'import "../helpers/oneOfSchemas.helper.ts"';
+    if (!this.usesOneOfSchemas) return '';
+    let imports =
+      "import { oneOfSchemas } from '../helpers/oneOfSchemas.helper';";
     imports += '\n';
     return imports;
   }
@@ -608,20 +624,56 @@ export default class Transformer {
     await writeFileSafely(outputPath, `${exports.join('\r\n')}`);
   }
 
+  /**
+   * Emits the `oneOfSchemas` helper as a plain exported function.
+   *
+   * This used to install a method onto yup's `MixedSchema` prototype with `Yup.addMethod`,
+   * and the emitted schemas called it as `Yup.mixed().oneOfSchemas([...])`. Nothing ever
+   * told TypeScript that method existed, so every one of those call sites was an error:
+   * `Property 'oneOfSchemas' does not exist on type 'MixedSchema'`, 207 times in the
+   * example output alone, which is most of why the emitted files need `// @ts-nocheck`.
+   *
+   * Declaring it was not a matter of finding the right `declare module 'yup'` block, and
+   * that is worth writing down because several attempts at one silently did nothing. The
+   * name `MixedSchema` that yup's entry point exports is a re-export of the *default*
+   * export of `yup/lib/mixed`, and that default export is `declare const Mixed: typeof
+   * MixedSchema` -- a value, with no type meaning at all. `type T = Yup.MixedSchema` is
+   * itself an error: "refers to a value, but is being used as a type here". So an
+   * `interface MixedSchema` inside `declare module 'yup'` has no class to merge with; it
+   * just creates a new, unrelated interface, and TypeScript reports nothing. The class
+   * lives in `yup/lib/mixed`, and augmenting that path does work, but it means declaring
+   * against a private path into another package's internals.
+   *
+   * A plain function needs none of that. It is typed with yup's public types, it does not
+   * mutate a shared prototype at import time, and it behaves identically: the old method
+   * body was `this.test(...)` on a `Yup.mixed()` instance, which is exactly what this does.
+   */
   async printHelpers() {
     await writeFileSafely(
       path.join(
         Transformer.outputPath,
         `schemas/helpers/oneOfSchemas.helper.ts`,
       ),
-      `${this.getImportYup()}\nYup.addMethod(Yup.MixedSchema, "oneOfSchemas", function (schemas: Yup.AnySchema[]) {
-        return this.test(
-          "one-of-schemas",
-          "Not all items in \${path} match one of the allowed schemas",
-          (item) =>
-            schemas.some((schema) => schema.isValidSync(item, { strict: true }))
-        );
-      });`,
+      `${this.getImportYup()}
+/**
+ * A schema that accepts a value matching at least one of \`schemas\`.
+ *
+ * An alternative is either an ordinary yup schema or a \`Yup.lazy\` wrapper around one,
+ * because references between generated schemas are deferred with \`Yup.lazy\`. yup exports
+ * no public name for that union, so it is spelled out here rather than reached for through
+ * a deep import into yup's internals.
+ */
+export type OneOfSchemasAlternative = Yup.AnySchema | ReturnType<typeof Yup.lazy>;
+
+export function oneOfSchemas(schemas: OneOfSchemasAlternative[]) {
+  return Yup.mixed().test(
+    'one-of-schemas',
+    'Not all items in \${path} match one of the allowed schemas',
+    (item) =>
+      schemas.some((schema) => schema.isValidSync(item, { strict: true })),
+  );
+}
+`,
     );
   }
 }

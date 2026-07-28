@@ -36,6 +36,7 @@
  */
 
 const fs = require('fs');
+const os = require('os');
 const path = require('path');
 const Module = require('module');
 
@@ -49,14 +50,16 @@ const ts = require('typescript');
 
 const failures = [];
 
+const TRANSPILE_OPTIONS = {
+  module: ts.ModuleKind.CommonJS,
+  target: ts.ScriptTarget.ES2019,
+  esModuleInterop: true,
+};
+
 // --- load the emitted TypeScript without modifying it ----------------------
 require.extensions['.ts'] = function (mod, filename) {
   const out = ts.transpileModule(fs.readFileSync(filename, 'utf8'), {
-    compilerOptions: {
-      module: ts.ModuleKind.CommonJS,
-      target: ts.ScriptTarget.ES2019,
-      esModuleInterop: true,
-    },
+    compilerOptions: TRANSPILE_OPTIONS,
     fileName: filename,
   }).outputText;
   mod._compile(out, filename);
@@ -182,6 +185,93 @@ const isSchema = (value) =>
       schema,
       populated,
     );
+  }
+
+  // -------------------------------------------------------------------------
+  // 4. The same schemas, compiled to JavaScript and required as JavaScript.
+  //
+  //    Passes 1-3 load the emitted `.ts` files through the hook installed at the
+  //    top of this script, so they only ever exercise the TypeScript sources.
+  //    Almost nobody runs those directly. A TypeScript user compiles them first,
+  //    and that is a different artifact.
+  //
+  //    The gap hid a real break. Every emitted object schema imported the helper
+  //    as `'../helpers/oneOfSchemas.helper.ts'`, extension and all, which `tsc`
+  //    turned into `require('../helpers/oneOfSchemas.helper.ts')`. Nothing by
+  //    that name sits next to the compiled output, so the first `require` of a
+  //    built schema threw `Cannot find module`, while this check stayed green.
+  // -------------------------------------------------------------------------
+  const compiledDir = fs.mkdtempSync(
+    path.join(os.tmpdir(), 'yup-schemas-compiled-'),
+  );
+  try {
+    // A parent directory with `"type": "module"` would make Node read the
+    // compiled CommonJS as ESM and fail for reasons that have nothing to do with
+    // the generator, so say what these files are rather than inheriting it.
+    fs.writeFileSync(
+      path.join(compiledDir, 'package.json'),
+      JSON.stringify({ name: 'compiled-schemas', type: 'commonjs' }),
+    );
+
+    let compiledCount = 0;
+    const compileTree = (fromDir, toDir) => {
+      fs.mkdirSync(toDir, { recursive: true });
+      for (const entry of fs.readdirSync(fromDir, { withFileTypes: true })) {
+        const from = path.join(fromDir, entry.name);
+        if (entry.isDirectory()) {
+          compileTree(from, path.join(toDir, entry.name));
+          continue;
+        }
+        if (!entry.name.endsWith('.ts')) continue;
+        const js = ts.transpileModule(fs.readFileSync(from, 'utf8'), {
+          compilerOptions: TRANSPILE_OPTIONS,
+          fileName: from,
+        }).outputText;
+        fs.writeFileSync(
+          path.join(toDir, entry.name.replace(/\.ts$/, '.js')),
+          js,
+        );
+        compiledCount += 1;
+      }
+    };
+    compileTree(schemasDir, compiledDir);
+
+    if (compiledCount === 0) {
+      failures.push(
+        `no .ts files were found under ${schemasDir} to compile, so the compiled-output ` +
+          'check would silently pass forever',
+      );
+    }
+
+    // `require` of the compiled entry point pulls in the whole graph, so a
+    // specifier that does not survive compilation throws right here.
+    let compiledEntry = {};
+    let compiledObjects = {};
+    try {
+      compiledEntry = require(path.join(compiledDir, 'index.js'));
+      compiledObjects = require(path.join(compiledDir, 'objects', 'index.js'));
+    } catch (err) {
+      failures.push(
+        `the emitted schemas compile but the compiled JavaScript cannot be loaded: ` +
+          `${err && err.name}: ${err && err.message}. Every TypeScript user builds this ` +
+          'output before running it, so a specifier that only resolves for the .ts ' +
+          'sources is broken for all of them.',
+      );
+    }
+
+    for (const [name, schema] of Object.entries(compiledEntry)) {
+      if (!isSchema(schema)) continue;
+      await record(`compiled ${name}.validate({})`, schema, {});
+    }
+    for (const [name, schema] of Object.entries(compiledObjects)) {
+      if (!isSchema(schema)) continue;
+      const keys = Object.keys(schema.fields || {});
+      const populated = {};
+      for (const key of keys) populated[key] = {};
+      await record(`compiled ${name}.validate({...})`, schema, populated);
+    }
+  } finally {
+    fs.rmSync(compiledDir, { recursive: true, force: true });
   }
 
   if (checks === 0) {
