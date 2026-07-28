@@ -623,8 +623,12 @@ export default class Transformer {
       return item;
     });
 
+    // The two halves must not overlap. `slice(0, lastNestedIndex + 1)` already includes the
+    // item at `lastNestedIndex`, so the second slice has to start after it. Starting at
+    // `lastNestedIndex` put that one item in both halves, and since both halves are
+    // concatenated, internals.ts re-exported that module twice.
     const itemsUptoNested = filesPaths.slice(0, lastNestedIndex + 1);
-    const itemsAfterNested = filesPaths.slice(lastNestedIndex);
+    const itemsAfterNested = filesPaths.slice(lastNestedIndex + 1);
 
     let finalItems = itemsToMoveUp
       .map(([envelope, item]) => {

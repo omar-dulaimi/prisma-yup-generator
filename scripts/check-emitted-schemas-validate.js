@@ -392,6 +392,39 @@ const isSchema = (value) =>
     fs.rmSync(compiledDir, { recursive: true, force: true });
   }
 
+  // -------------------------------------------------------------------------
+  // 5. internals.ts must not re-export the same module twice.
+  //
+  //    It did. The export list is assembled by splitting at the last `Nested`
+  //    entry and concatenating the two halves, and both halves included the
+  //    entry at the split point, so exactly one module was always listed twice.
+  //    Nothing that merely loads the output notices, because a repeated
+  //    `export * from` is idempotent.
+  // -------------------------------------------------------------------------
+  const internalsPath = path.join(schemasDir, 'internals.ts');
+  if (!fs.existsSync(internalsPath)) {
+    failures.push(`${internalsPath} does not exist under ${schemasDir}`);
+  } else {
+    const lines = fs
+      .readFileSync(internalsPath, 'utf8')
+      .split(/\r?\n/)
+      .filter(Boolean);
+    const counts = new Map();
+    for (const line of lines) counts.set(line, (counts.get(line) || 0) + 1);
+    for (const [line, count] of counts) {
+      if (count === 1) continue;
+      failures.push(
+        `internals.ts contains "${line}" ${count} times. Each generated module belongs in ` +
+          'the re-export list exactly once.',
+      );
+    }
+    if (lines.length === 0) {
+      failures.push(
+        'internals.ts is empty, so the duplicate-export check would silently pass forever',
+      );
+    }
+  }
+
   if (checks === 0) {
     failures.push(
       'no schemas were checked, so this check would silently pass forever',
