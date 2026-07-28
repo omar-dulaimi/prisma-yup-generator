@@ -16,9 +16,21 @@ permissions:
 
 jobs:
   # Gates the generator itself. Deliberately does NOT typecheck the schemas the generator
-  # emits: that output currently needs its `// @ts-nocheck` header to compile at all (232
-  # errors without it, see issue #14), so a job that typechecked emissions would be red
-  # forever and would tell us nothing about whether this repo's own code is sound.
+  # emits: that output still needs its `// @ts-nocheck` header to compile (see issue #14),
+  # so a job that typechecked emissions would be red and would tell us nothing about
+  # whether this repo's own code is sound.
+  #
+  # It is much closer than it was. Stripping the header used to give 271 errors, 207 of
+  # them the single message "Property 'oneOfSchemas' does not exist on type 'MixedSchema'";
+  # that helper is now a typed function and those are gone. The 64 that remain are two
+  # mechanical classes, both from deferring references with `Yup.lazy`:
+  #   * 45x TS2345, because yup 0.32 types `array().of()` as taking `AnySchema` and a
+  #     `Lazy` is not one, even though ArraySchema's own parameter admits `Lazy`. Emitting
+  #     `Yup.lazy(() => Yup.array().of(X))` instead of `Yup.array().of(Yup.lazy(() => X))`
+  #     clears them and behaves the same.
+  #   * 19x TS7022, self-referential consts with no type annotation. Annotating the export
+  #     clears them, at the cost of the inferred per-field shape on cyclic schemas.
+  # Once both are done this job can typecheck the emitted output and the header can go.
   verify:
     name: Typecheck and generate (Node ${{ matrix.node-version }})
     runs-on: ubuntu-latest

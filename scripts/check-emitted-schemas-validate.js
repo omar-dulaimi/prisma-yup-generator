@@ -23,8 +23,9 @@
  * self-references.
  *
  * This check runs the emitted schemas. It deliberately does not typecheck them: that output
- * needs its `// @ts-nocheck` header to compile at all (see issue #14), so typechecking here
- * would be red forever and would say nothing about whether the schemas work.
+ * still needs its `// @ts-nocheck` header to compile (see issue #14, and the note on the
+ * verify job in ci.yml for what is left), so typechecking here would be red and would say
+ * nothing about whether the schemas work.
  *
  * A throw is only a failure when it is not a `ValidationError`. Rejecting bad input is the
  * job; crashing is the bug.

@@ -18,9 +18,10 @@
  *   2. Execute the example. Wrong names and wrong argument shapes both throw at runtime,
  *      and only running it proves the documented snippet works end to end.
  *
- * It deliberately does not typecheck the emitted schemas. That output needs its
- * `// @ts-nocheck` header to compile at all (see issue #14), so typechecking it here would
- * be red forever and would say nothing about whether the README is honest.
+ * It deliberately does not typecheck the emitted schemas. That output still needs its
+ * `// @ts-nocheck` header to compile (see issue #14, and the note on the verify job in
+ * ci.yml for what is left), so typechecking it here would be red and would say nothing
+ * about whether the README is honest.
  *
  * Usage: node scripts/check-readme-example.js [project-root] [readme]
  *
