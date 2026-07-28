@@ -1,0 +1,160 @@
+name: CI
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+    branches: [master]
+  workflow_call:
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+permissions:
+  contents: read
+
+jobs:
+  # Gates the generator itself. Deliberately does NOT typecheck the schemas the generator
+  # emits: that output currently needs its `// @ts-nocheck` header to compile at all (232
+  # errors without it, see issue #14), so a job that typechecked emissions would be red
+  # forever and would tell us nothing about whether this repo's own code is sound.
+  verify:
+    name: Typecheck and generate (Node ${{ matrix.node-version }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        node-version: ['22.x', '24.x']
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: npm
+
+      - run: npm ci
+
+      # There is no `typecheck`, `lint` or `test` script in this repo, and no linter is
+      # installed, so nothing here invents one. `tsc` and `gen-example` are what the repo
+      # actually defines, via tsconfig.json and package.json respectively.
+      - name: Typecheck the generator source
+        run: npx tsc --noEmit
+
+      - name: Build, then run the generator against the example schema
+        run: npm run gen-example
+
+      - name: Assert the generator actually emitted schemas
+        # `prisma generate` exits 0 even when a generator writes nothing useful, so check
+        # for real content rather than trusting the exit code.
+        run: |
+          set -euo pipefail
+          test -d prisma/generated/schemas
+          count="$(find prisma/generated -type f | wc -l)"
+          echo "emitted $count files"
+          test "$count" -ge 50
+          grep -q 'export const PostCreateSchema' prisma/generated/schemas/createOnePost.schema.ts
+          grep -q 'export const UserCreateSchema' prisma/generated/schemas/createOneUser.schema.ts
+
+  # Verifies the artefact that users actually get, which is not the working tree. This repo
+  # publishes a curated directory assembled by package.sh, so the working tree passing tells
+  # you nothing about whether the tarball has the files in it, whether `bin` resolves after a
+  # real install, or whether the thing runs on a supported Node. Sibling repos shipped a
+  # `files` rule that omitted a required JSON file and broke every consumer for four years
+  # with fully green CI, so this job packs, installs into an empty project, and runs the
+  # command the README leads with.
+  packaged-artifact:
+    name: Packaged artifact (Node ${{ matrix.node-version }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        node-version: ['22.x', '24.x']
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: npm
+
+      - run: npm ci
+
+      - name: Build the publishable package directory
+        # The same script the release job runs, so CI exercises the real packaging path.
+        run: npm run package
+
+      - name: Pack the tarball that would be published
+        working-directory: package
+        # --pack-destination keeps the tarball out of package/, so it cannot end up inside
+        # a later publish of that same directory.
+        run: npm pack --pack-destination "$RUNNER_TEMP"
+
+      - name: Create an empty consumer project
+        # An empty directory, not the repo: installing into the repo would let the working
+        # tree's own node_modules and config mask a broken package.
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/consumer/prisma"
+          cd "$RUNNER_TEMP/consumer"
+          npm init -y > /dev/null
+          cat > prisma/schema.prisma <<'SCHEMA'
+          generator client {
+            provider = "prisma-client-js"
+          }
+
+          generator yup {
+            provider = "prisma-yup-generator"
+          }
+
+          datasource db {
+            provider = "sqlite"
+            url      = "file:./dev.db"
+          }
+
+          model User {
+            id    Int     @id @default(autoincrement())
+            email String  @unique
+            name  String?
+            posts Post[]
+          }
+
+          model Post {
+            id        Int      @id @default(autoincrement())
+            createdAt DateTime @default(now())
+            updatedAt DateTime @updatedAt
+            title     String
+            content   String?
+            published Boolean  @default(false)
+            viewCount Int      @default(0)
+            author    User?    @relation(fields: [authorId], references: [id])
+            authorId  Int?
+          }
+          SCHEMA
+
+      - name: Install the packed tarball
+        working-directory: ${{ runner.temp }}/consumer
+        run: |
+          set -euo pipefail
+          tarball="$(ls "$RUNNER_TEMP"/prisma-yup-generator-*.tgz)"
+          echo "installing $tarball"
+          npm install --no-audit --no-fund "$tarball" prisma@4 @prisma/client@4
+
+      - name: Run the README's headline command against the installed package
+        working-directory: ${{ runner.temp }}/consumer
+        # `npx prisma generate` is step 3 of the README. It only passes if the tarball
+        # contained lib/, if bin/prisma-yup-generator resolved, and if the generator ran
+        # on this Node version.
+        run: npx prisma generate
+
+      - name: Assert the installed package emitted schemas
+        working-directory: ${{ runner.temp }}/consumer
+        run: |
+          set -euo pipefail
+          test -d prisma/generated/schemas
+          count="$(find prisma/generated -type f | wc -l)"
+          echo "emitted $count files"
+          test "$count" -ge 50
+          grep -q 'export const PostCreateSchema' prisma/generated/schemas/createOnePost.schema.ts
+          grep -q 'export const UserCreateSchema' prisma/generated/schemas/createOneUser.schema.ts

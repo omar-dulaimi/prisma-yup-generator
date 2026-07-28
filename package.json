@@ -8,7 +8,9 @@
   },
   "scripts": {
     "gen-example": "tsc && npx prisma generate",
-    "package:publish": "./package.sh && cd package && npm publish"
+    "package": "./package.sh",
+    "package:publish": "./package.sh && cd package && npm publish",
+    "release": "semantic-release"
   },
   "author": {
     "name": "Omar Dulaimi",
@@ -32,9 +34,17 @@
     "yup": "^0.32.11"
   },
   "devDependencies": {
+    "@semantic-release/changelog": "^6.0.3",
+    "@semantic-release/commit-analyzer": "^13.0.1",
+    "@semantic-release/git": "^10.0.1",
+    "@semantic-release/github": "^12.0.9",
+    "@semantic-release/npm": "^13.1.5",
+    "@semantic-release/release-notes-generator": "^14.1.1",
     "@types/node": "^18.0.3",
     "@types/prettier": "^2.6.3",
+    "conventional-changelog-conventionalcommits": "^9.3.1",
     "prisma": "^4.0.0",
+    "semantic-release": "^25.0.8",
     "typescript": "^4.7.4"
   },
   "bugs": {

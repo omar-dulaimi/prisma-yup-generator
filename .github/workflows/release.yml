@@ -1,0 +1,58 @@
+name: Release
+
+on:
+  push:
+    branches: [master]
+  workflow_dispatch:
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+jobs:
+  # Nothing publishes unless the generator built, ran, and the packed tarball worked from a
+  # clean install on every supported Node version.
+  verify:
+    if: "!contains(github.event.head_commit.message, '[skip ci]')"
+    uses: ./.github/workflows/ci.yml
+
+  release:
+    needs: verify
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      issues: write
+      pull-requests: write
+      # Required. @semantic-release/npm asks GitHub for an OIDC token and npm exchanges it for
+      # a short-lived publish credential. Without this permission the exchange fails, and there
+      # is no token to fall back on because the npm account disallows them.
+      id-token: write
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      # Node 24 is load-bearing, not a preference: the OIDC exchange is performed by the npm
+      # CLI, which needs npm >= 11.5.1. Node 22 still bundles npm 10.
+      # Deliberately no `registry-url`: it writes an .npmrc containing an authToken
+      # placeholder, and npm then takes the token path instead of the OIDC one.
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '24.x'
+          cache: npm
+
+      - run: npm ci
+
+      - name: Build the publishable package directory
+        # Must run before semantic-release. @semantic-release/npm is configured with
+        # pkgRoot: "package", and it reads that package.json during verifyConditions.
+        run: npm run package
+
+      # No NPM_TOKEN: the package is configured for npm Trusted Publishing with tokens
+      # disallowed, so authentication is the OIDC exchange alone. Setting NPM_TOKEN here would
+      # write a conflicting .npmrc and break it.
+      - name: Semantic release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: npm run release
