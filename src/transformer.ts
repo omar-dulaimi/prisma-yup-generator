@@ -124,9 +124,14 @@ export default class Transformer {
     // `role: { in: ['USER'] }` was checked against the bare enum and rejected for not being
     // one of its values. That exemption never showed because the only fields it could reach
     // were dropped before they got this far.
-    const yupType = inputType.isList
-      ? `Yup.array().of(${reference})`
-      : reference;
+    // `Yup.array(x)` rather than `Yup.array().of(x)`, because the reference is a `Yup.lazy`
+    // wrapper and yup's own types disagree with themselves about those: `ArraySchema` is declared
+    // as `<T extends AnySchema | Lazy<any, any>>`, but its `of()` method narrows to
+    // `<TInner extends AnySchema>`, so passing a lazy through `of()` is an error while passing the
+    // same value to the constructor is not. Both behave identically at runtime, verified by
+    // validating a good and a bad element through each. This was the entire remaining type-error
+    // population in the emitted output.
+    const yupType = inputType.isList ? `Yup.array(${reference})` : reference;
 
     return inputsLength === 1 ? `  ${field.name}: ${yupType}` : yupType;
   }
@@ -319,10 +324,28 @@ export default class Transformer {
     return `export const ${name}Schema = ${schema}`;
   }
 
+  /**
+   * Emits nothing. The name is kept because every call site expects a leading string, and
+   * changing them all would be a larger diff than the thing it documents.
+   *
+   * Every emitted file used to open with `// @ts-nocheck`, which is issue #14. It was doing
+   * real work: on the two-model example the output carried 252 type errors, so the header was
+   * the only reason the generated code appeared to compile. Those errors are now zero, which
+   * took four fixes, and the header would only hide the next regression:
+   *
+   *   207  the `oneOfSchemas` call sites, now a plain typed function instead of a prototype
+   *        method that TypeScript was never told about
+   *    45  `Yup.array().of(lazy)`, now `Yup.array(lazy)`, because yup's `of()` narrows to
+   *        `AnySchema` while the class itself admits `AnySchema | Lazy`
+   *     -  fields typed as a user-defined enum, which were dropped entirely rather than
+   *        mistyped, so they contributed no errors while silently validating nothing
+   *     -  the helper import carrying a `.ts` extension, which compiled to a require of a
+   *        file that does not exist beside the output
+   *
+   * If this ever needs to come back, that is a regression worth seeing rather than silencing.
+   */
   getImportNoCheck() {
-    let imports = '// @ts-nocheck';
-    imports += '\n';
-    return imports;
+    return '';
   }
 
   /**

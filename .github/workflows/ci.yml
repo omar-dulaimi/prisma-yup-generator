@@ -93,6 +93,14 @@ jobs:
         # ValidationError. It does not typecheck them: see the note on this job.
         run: node scripts/check-emitted-schemas-validate.js
 
+      # Typechecks the emitted output, which was impossible until now. Every emitted file used to
+      # open with `// @ts-nocheck` (issue #14), and stripping it left 252 errors on this schema, so
+      # this step would have been red forever. It is zero now and the header is gone, so this is
+      # what stops it coming back. It also fails if a @ts-nocheck reappears, since that would make
+      # the step pass while hiding exactly what it exists to catch.
+      - name: Check that the emitted output typechecks
+        run: node scripts/check-emitted-output-typechecks.js
+
   # Verifies the artefact that users actually get, which is not the working tree. This repo
   # publishes a curated directory assembled by package.sh, so the working tree passing tells
   # you nothing about whether the tarball has the files in it, whether `bin` resolves after a
@@ -210,3 +218,7 @@ jobs:
       # provider name resolves to the installed tarball rather than to this working tree.
       - name: Check enum fields against the installed package
         run: node scripts/check-enum-fields.js "$RUNNER_TEMP/consumer" prisma-yup-generator
+
+      # And the same for the installed package's output, since that is what users compile.
+      - name: Check that the installed package's output typechecks
+        run: node scripts/check-emitted-output-typechecks.js "$RUNNER_TEMP/consumer/prisma/generated"
