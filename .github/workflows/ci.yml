@@ -64,6 +64,13 @@ jobs:
         # example. It does not typecheck the emitted schemas: see the note on this job.
         run: node scripts/check-readme-example.js
 
+      - name: Check that user-defined enum fields are emitted and enforced
+        # Fields typed as a user-defined enum were dropped from the emitted shape, so a
+        # bogus `role` validated clean. Nothing here could have caught it: the example
+        # schema is SQLite, and Prisma does not support `enum` on SQLite, so no fixture
+        # in this repo can contain an enum field. The script carries its own schema.
+        run: node scripts/check-enum-fields.js
+
       - name: Check that the emitted schemas validate instead of crashing
         # The README example only ever validated a value with every documented key present,
         # so it never took the path where yup computes a field's default. On that path the
@@ -186,3 +193,8 @@ jobs:
       # copy that matters is the one produced by the installed package, not the working tree.
       - name: Check that the installed package's schemas validate instead of crashing
         run: node scripts/check-emitted-schemas-validate.js "$RUNNER_TEMP/consumer"
+
+      # Generates a second schema, one with enums in it, inside the consumer project, so the
+      # provider name resolves to the installed tarball rather than to this working tree.
+      - name: Check enum fields against the installed package
+        run: node scripts/check-enum-fields.js "$RUNNER_TEMP/consumer" prisma-yup-generator

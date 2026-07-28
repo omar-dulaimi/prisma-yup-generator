@@ -89,6 +89,27 @@ export default class Transformer {
     return `Yup.lazy(() => ${schemaName}.default(undefined))`;
   }
 
+  /**
+   * Whether this input type refers to another schema this generator emits, rather than to
+   * a plain scalar.
+   *
+   * Both namespaces matter. Prisma's own generated types carry `namespace: 'prisma'`, which
+   * covers input objects like `PostWhereInput` and enums like `SortOrder`. Anything declared
+   * in the user's own schema carries `namespace: 'model'`, and for a `.prisma` file that is
+   * exactly its `enum` blocks.
+   *
+   * Only `'prisma'` used to be accepted, so every field typed as a user-defined enum was
+   * dropped from the emitted shape without a word. The enum's own schema file was written
+   * correctly the whole time; nothing ever referenced it. Because yup ignores keys a shape
+   * does not mention, that made the schemas silently permissive: a `role` of
+   * `'NOT_A_REAL_ROLE'` validated clean and came back out of `validate()` untouched.
+   */
+  static isGeneratedSchemaReference(
+    inputType: PrismaDMMF.SchemaArgInputType,
+  ): boolean {
+    return inputType.namespace === 'prisma' || inputType.namespace === 'model';
+  }
+
   getPrismaStringLine(
     field: PrismaDMMF.SchemaArg,
     inputType: PrismaDMMF.SchemaArgInputType,
@@ -99,12 +120,13 @@ export default class Transformer {
     const type = inputType.type as string;
     const reference = Transformer.deferredSchemaReference(type);
 
-    // A list of enums is left unwrapped, as it always has been, so this change alters only
-    // when a reference is read and never what it accepts.
-    const yupType =
-      inputType.isList && !Transformer.enumNames.includes(type)
-        ? `Yup.array().of(${reference})`
-        : reference;
+    // A list is a list whatever it holds. Enums used to be exempted here, which meant
+    // `role: { in: ['USER'] }` was checked against the bare enum and rejected for not being
+    // one of its values. That exemption never showed because the only fields it could reach
+    // were dropped before they got this far.
+    const yupType = inputType.isList
+      ? `Yup.array().of(${reference})`
+      : reference;
 
     return inputsLength === 1 ? `  ${field.name}: ${yupType}` : yupType;
   }
@@ -148,7 +170,7 @@ export default class Transformer {
             field,
           ];
         } else {
-          if (inputType.namespace === 'prisma') {
+          if (Transformer.isGeneratedSchemaReference(inputType)) {
             if (inputType.type !== this.name) {
               this.addSchemaImport(inputType.type as string);
             }
@@ -184,7 +206,7 @@ export default class Transformer {
                 : 'Yup.boolean()',
             );
           } else {
-            if (inputType.namespace === 'prisma') {
+            if (Transformer.isGeneratedSchemaReference(inputType)) {
               if (inputType.type !== this.name) {
                 this.addSchemaImport(inputType.type as string);
               }
