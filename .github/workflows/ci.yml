@@ -57,6 +57,13 @@ jobs:
           grep -q 'export const PostCreateSchema' prisma/generated/schemas/createOnePost.schema.ts
           grep -q 'export const UserCreateSchema' prisma/generated/schemas/createOneUser.schema.ts
 
+      - name: Check the README's example against the emitted schemas
+        # The README told people to import `PostCreateOneSchema`, which this generator has
+        # never emitted, so the first snippet a new user copied threw at the import. This
+        # resolves every documented name through the emitted module graph and then runs the
+        # example. It does not typecheck the emitted schemas: see the note on this job.
+        run: node scripts/check-readme-example.js
+
   # Verifies the artefact that users actually get, which is not the working tree. This repo
   # publishes a curated directory assembled by package.sh, so the working tree passing tells
   # you nothing about whether the tarball has the files in it, whether `bin` resolves after a
@@ -158,3 +165,9 @@ jobs:
           test "$count" -ge 50
           grep -q 'export const PostCreateSchema' prisma/generated/schemas/createOnePost.schema.ts
           grep -q 'export const UserCreateSchema' prisma/generated/schemas/createOneUser.schema.ts
+
+      # Runs from the repo checkout, not the consumer, so the script and this repo's own
+      # typescript resolve. It reads the emitted schemas out of the consumer project, which
+      # is the copy a user would actually have.
+      - name: Check the README's example against the installed package's output
+        run: node scripts/check-readme-example.js "$RUNNER_TEMP/consumer"

@@ -16,7 +16,7 @@ Automatically generate [Yup](https://github.com/jquense/yup) schemas from your [
 ## Table of Contents
 
 - [Supported Prisma Versions](#supported-prisma-versions)
-- [Installation](#installing)
+- [Installation](#installation)
 - [Usage](#usage)
 - [Additional Options](#additional-options)
 
@@ -86,11 +86,13 @@ will generate the following files
 4- Use generated schemas somewhere in your API logic, like middleware or decorator
 
 ```ts
-import { PostCreateOneSchema } from './prisma/generated/schemas';
+import { PostCreateSchema } from './prisma/generated/schemas';
 
 app.post('/blog', async (req, res, next) => {
   const { body } = req;
-  await PostCreateOneSchema.validate(body);
+  // Each schema mirrors the arguments of the Prisma Client method it is named after, so
+  // `PostCreateSchema` validates what you would pass to `prisma.post.create`.
+  await PostCreateSchema.validate({ data: body });
 });
 ```
 
