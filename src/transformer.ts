@@ -520,7 +520,7 @@ export default class Transformer {
         await writeFileSafely(
           path.join(Transformer.outputPath, `schemas/${upsertOne}.schema.ts`),
           `${this.getImportsForSchemas(imports)}${this.addExportSchema(
-            `Yup.object({ where: ${modelName}WhereUniqueInputObjectSchema, data: ${modelName}CreateInputObjectSchema, update: ${modelName}UpdateInputObjectSchema  }).required()`,
+            `Yup.object({ where: ${modelName}WhereUniqueInputObjectSchema, create: ${modelName}CreateInputObjectSchema, update: ${modelName}UpdateInputObjectSchema  }).required()`,
             `${modelName}Upsert`,
           )}`,
         );

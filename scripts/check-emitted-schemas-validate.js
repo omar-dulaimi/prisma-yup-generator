@@ -224,6 +224,88 @@ const isSchema = (value) =>
   }
 
   // -------------------------------------------------------------------------
+  // 3c. Every operation schema mirrors the arguments of the Prisma Client method
+  //     it is named after, which is what the README promises it does.
+  //
+  //     `PostUpsertSchema` did not. It asked for `data` where Prisma's upsert
+  //     takes `create`, so the correct argument was rejected outright:
+  //
+  //       PostUpsertSchema.validate({ where, create, update })
+  //       // ValidationError: data.title is a required field
+  //
+  //     on a `data` the caller never wrote and Prisma does not accept, while the
+  //     `create` that was sent went unvalidated. Passes 1-3 could not see it:
+  //     they validate `{}` and a value built from the schema's own key names, so
+  //     a schema asking for the wrong argument agrees with itself.
+  //
+  //     Names below are Prisma 4's `<Model><Operation>Args`. `required` lists the
+  //     arguments Prisma itself marks non-optional.
+  // -------------------------------------------------------------------------
+  const FIND_ARGS = ['where', 'orderBy', 'cursor', 'take', 'skip', 'distinct'];
+  const AGGREGATE_EXTRAS = ['_count', '_avg', '_sum', '_min', '_max'];
+  const OPERATION_ARGS = {
+    FindUnique: { allowed: ['where'], required: ['where'] },
+    FindFirst: { allowed: FIND_ARGS, required: [] },
+    FindMany: { allowed: FIND_ARGS, required: [] },
+    Create: { allowed: ['data'], required: ['data'] },
+    DeleteOne: { allowed: ['where'], required: ['where'] },
+    DeleteMany: { allowed: ['where'], required: [] },
+    UpdateOne: { allowed: ['data', 'where'], required: ['data', 'where'] },
+    UpdateMany: { allowed: ['data', 'where'], required: ['data'] },
+    Upsert: {
+      allowed: ['where', 'create', 'update'],
+      required: ['where', 'create', 'update'],
+    },
+    Aggregate: {
+      allowed: ['where', 'orderBy', 'cursor', 'take', 'skip'].concat(
+        AGGREGATE_EXTRAS,
+      ),
+      required: [],
+    },
+    GroupBy: {
+      allowed: ['where', 'orderBy', 'by', 'having', 'take', 'skip'].concat(
+        AGGREGATE_EXTRAS,
+      ),
+      required: ['by'],
+    },
+  };
+  const operationName =
+    /^(.+?)(FindUnique|FindFirst|FindMany|DeleteMany|DeleteOne|UpdateMany|UpdateOne|Upsert|Aggregate|GroupBy|Create)Schema$/;
+
+  let operationsChecked = 0;
+  for (const [name, schema] of Object.entries(entry)) {
+    if (!isSchema(schema)) continue;
+    const match = operationName.exec(name);
+    if (!match) continue;
+    const { allowed, required } = OPERATION_ARGS[match[2]];
+    const keys = Object.keys(schema.fields || {});
+    operationsChecked += 1;
+
+    for (const key of keys) {
+      if (allowed.includes(key)) continue;
+      failures.push(
+        `${name} accepts an argument '${key}', which prisma.${match[1].toLowerCase()}.` +
+          `${match[2].replace(/One$/, '').toLowerCase()} does not take. Its arguments are: ` +
+          `${allowed.join(', ')}.`,
+      );
+    }
+    for (const key of required) {
+      if (keys.includes(key)) continue;
+      failures.push(
+        `${name} has no '${key}' argument, but Prisma requires it, so the value it does ` +
+          `receive is never validated. Emitted arguments: ${keys.join(', ') || '(none)'}.`,
+      );
+    }
+  }
+
+  if (operationsChecked === 0) {
+    failures.push(
+      'no operation schemas were matched by name, so the argument check would silently ' +
+        'pass forever',
+    );
+  }
+
+  // -------------------------------------------------------------------------
   // 4. The same schemas, compiled to JavaScript and required as JavaScript.
   //
   //    Passes 1-3 load the emitted `.ts` files through the hook installed at the
